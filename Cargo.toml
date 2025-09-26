@@ -1,0 +1,14 @@
+[workspace]
+members = [
+    "crates/forge-web-ui"
+]
+
+[workspace.package]
+edition = "2021"
+license = "MIT"
+authors = ["Leo Rocha <leonardo.rocha1990@gmail.com>"]
+description = "Open Source Forge Bitwave System"
+repository = "https://github.com/roachmaster/forge-oss"
+
+[workspace.dependencies]
+anyhow = "1.0"
