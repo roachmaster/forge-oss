@@ -1,101 +1,103 @@
-//! Mock data for the WorkbenchDisplay (used in dev builds or tests).
+use crate::forge_view_model::{EditorVM, HeaderVM, StatusVM, TerminalVM, TreeNodeVM, TreeVM, WorkbenchVM};
 
-use forge_view_model::*;
-use std::cmp::Ordering;
-
-/// Build a demo WorkbenchVM snapshot for development.
+/// Build a complete mock VM (used before WS snapshot arrives).
 pub fn make_mock_vm() -> WorkbenchVM {
     WorkbenchVM {
-        header: HeaderVM { title: "Forge IDE".into(), can_build: true, can_run: true },
-        tree: mock_tree_paths(),
+        header: HeaderVM {
+            title: "forge-oss".into(),
+            can_build: true,
+            can_run: true,
+        },
+        tree: mock_tree_forge_oss(),
         editor: EditorVM {
-            file_path: "crates/forge-web-ui/src/lib.rs".into(),
-            content: "// hello from Forge\n".into(),
-            cursor_line: 1,
-            cursor_col: 1,
+            file_path: "".into(),
+            content: "// select a file from the tree\n".into(),
+            cursor_line: 0,
+            cursor_col: 0,
             is_dirty: false,
         },
-        terminal: TerminalVM { lines: vec!["trunk serve…".into()], is_busy: false },
-        status: StatusVM { msg: "Ready".into(), connected: true },
+        terminal: TerminalVM {
+            lines: vec!["workbenchd: (mock) not connected".into()],
+            is_busy: false,
+        },
+        status: StatusVM {
+            msg: "Connecting to workbenchd…".into(),
+            connected: false,
+        },
     }
 }
 
-fn mock_tree_paths() -> TreeVM {
-    const ROOT: &str = "forge-oss";
-    let paths = [
-        "README.md",
-        "crates/forge-web-ui/Cargo.toml",
-        "crates/forge-web-ui/index.html",
-        "crates/forge-web-ui/src/lib.rs",
-        "crates/forge-web-ui/src/display.rs",
-        "crates/forge-web-ui/src/views.rs",
-        "crates/forge-web-ui/src/viewcore.rs",
-        "crates/forge-web-ui/src/dom.rs",
-        "crates/forge-view-model/Cargo.toml",
-        "crates/forge-view-model/src/lib.rs",
-        "crates/forge-workbenchd/Cargo.toml",
-        "crates/forge-workbenchd/src/main.rs",
-        "scripts/project_root.sh",
-        "scripts/env.sh",
-        "scripts/dev.sh",
-        ".forge-root",
-    ];
+/* ---------------------- Mock tree ---------------------- */
 
-    tree_from_paths(ROOT, &paths)
-}
+fn mock_tree_forge_oss() -> TreeVM {
+    // root node (path = "")
+    let mut root = dir_node("forge-oss", "", true);
 
-/// ---------- Tree builder utils ----------
+    // crates/
+    let mut crates = dir_node("crates", "crates", true);
 
-fn tree_from_paths(root_name: &str, paths: &[&str]) -> TreeVM {
-    let mut root = dir_node(root_name);
-    for p in paths { insert_path(&mut root, p); }
-    sort_dirs_first(&mut root);
+    // crates/forge-web-ui/
+    let mut fwui = dir_node("forge-web-ui", "crates/forge-web-ui", true);
+
+    // crates/forge-web-ui/src/
+    let mut fwui_src = dir_node("src", "crates/forge-web-ui/src", true);
+    fwui_src.children.push(file_node("lib.rs", "crates/forge-web-ui/src/lib.rs"));
+    // (Add more if desired)
+    mark_has_children(&mut fwui_src);
+
+    fwui.children.push(fwui_src);
+    fwui.children.push(file_node("Cargo.toml", "crates/forge-web-ui/Cargo.toml"));
+    mark_has_children(&mut fwui);
+
+    // crates/forge-view-model/
+    let mut fvm = dir_node("forge-view-model", "crates/forge-view-model", true);
+    let mut fvm_src = dir_node("src", "crates/forge-view-model/src", true);
+    fvm_src.children.push(file_node("lib.rs", "crates/forge-view-model/src/lib.rs"));
+    mark_has_children(&mut fvm_src);
+    fvm.children.push(fvm_src);
+    fvm.children.push(file_node("Cargo.toml", "crates/forge-view-model/Cargo.toml"));
+    mark_has_children(&mut fvm);
+
+    crates.children.push(fwui);
+    crates.children.push(fvm);
+    mark_has_children(&mut crates);
+
+    // README at repo root (optional)
+    // root.children.push(file_node("README.md", "README.md"));
+
+    root.children.push(crates);
+    mark_has_children(&mut root);
+
     TreeVM { roots: vec![root] }
 }
 
-fn insert_path(root: &mut TreeNodeVM, path: &str) {
-    let mut parts = path.split('/').peekable();
-    let mut cur = root;
-    while let Some(part) = parts.next() {
-        let is_last = parts.peek().is_none();
-        if is_last {
-            if part.is_empty() { break; }
-            push_or_merge_file(cur, part);
-        } else {
-            cur = push_or_merge_dir(cur, part);
-        }
+/* ---------------------- Helpers ---------------------- */
+
+fn dir_node(name: impl Into<String>, path: impl Into<String>, open: bool) -> TreeNodeVM {
+    TreeNodeVM {
+        path: path.into(),
+        name: name.into(),
+        is_dir: true,
+        open,
+        has_children: false, // will be computed by mark_has_children
+        children: vec![],
     }
 }
 
-fn push_or_merge_dir<'a>(parent: &'a mut TreeNodeVM, name: &str) -> &'a mut TreeNodeVM {
-    if let Some(idx) = parent.children.iter().position(|n| n.is_dir && n.name == name) {
-        parent.children.get_mut(idx).unwrap()
-    } else {
-        parent.children.push(dir_node(name));
-        parent.children.last_mut().unwrap()
-    }
-}
-fn push_or_merge_file(parent: &mut TreeNodeVM, name: &str) {
-    if !parent.children.iter().any(|n| !n.is_dir && n.name == name) {
-        parent.children.push(file_node(name));
+fn file_node(name: impl Into<String>, path: impl Into<String>) -> TreeNodeVM {
+    TreeNodeVM {
+        path: path.into(),
+        name: name.into(),
+        is_dir: false,
+        open: false,
+        has_children: false,
+        children: vec![],
     }
 }
 
-fn dir_node(name: &str) -> TreeNodeVM {
-    TreeNodeVM { name: name.into(), is_dir: true, open: true, children: vec![] }
-}
-
-fn file_node(name: &str) -> TreeNodeVM {
-    TreeNodeVM { name: name.into(), is_dir: false, open: false, children: vec![] }
-}
-
-fn sort_dirs_first(node: &mut TreeNodeVM) {
-    node.children.sort_by(|a, b| match (a.is_dir, b.is_dir) {
-        (true, false) => Ordering::Less,
-        (false, true) => Ordering::Greater,
-        _ => a.name.to_lowercase().cmp(&b.name.to_lowercase()),
-    });
-    for child in &mut node.children {
-        if child.is_dir { sort_dirs_first(child); }
+/// After pushing children, call this so chevrons render properly for dirs.
+fn mark_has_children(n: &mut TreeNodeVM) {
+    if n.is_dir {
+        n.has_children = !n.children.is_empty();
     }
 }

@@ -20,10 +20,13 @@ web-sys = { version = "0.3", features = [
     "Node",
     "Text",
     "console",
-    # Networking / events we’ll use next
+    # Storage / Location
+    "Storage",
+    "Location",
+    # WebSocket + events
     "WebSocket",
     "MessageEvent",
-    "Location"
+    "Event"
 ] }
 
 # --- Dev-only panic hook (enable via feature 'dev') ---

@@ -7,11 +7,19 @@ pub struct HeaderVM {
     pub can_run: bool,
 }
 
+/// Single node in the file tree.
+/// - `path`: repo-relative, stable identifier (e.g., "crates/forge-web-ui/src").
+/// - `is_dir`: directory vs file.
+/// - `open`: initial open/closed state (server may seed; client can override locally).
+/// - `has_children`: true if dir has any entries (even when closed), used to draw a chevron.
+/// - `children`: only populated when `open == true` (can be empty for files or lazy dirs).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct TreeNodeVM {
+    pub path: String,               // NEW
     pub name: String,
     pub is_dir: bool,
-    pub open: bool,
+    pub open: bool,                 // UPDATED: explicitly used by UI; client may override
+    pub has_children: bool,         // NEW
     pub children: Vec<TreeNodeVM>,
 }
 
@@ -66,7 +74,8 @@ pub enum ServerToClient {
 pub enum ClientIntent {
     SelectProject { path: String },
     OpenFile { path: String },
-    ToggleDir { path: String },
+    /// Toggle a directory’s open state (explicit target state for clarity/idempotency).
+    ToggleDir { path: String, open: bool }, // UPDATED
     SaveFile { path: String, content: String },
     RunCmd { cmd: String },
     BuildCmd,

@@ -1,6 +1,8 @@
 [workspace]
 members = [
-    "crates/forge-web-ui"
+    "crates/forge-web-ui",
+    "crates/forge-view-model",
+    "crates/forge-workbenchd"
 ]
 resolver = "2"
 
