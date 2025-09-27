@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::vm::{HeaderVM, TreeVM, EditorVM, TerminalVM, StatusVM};
+use forge_view_model::{HeaderVM, TreeVM, EditorVM, TerminalVM, StatusVM};
 
 /// A minimal, framework-agnostic virtual view.
 /// Views return this; the DOM driver applies it.

@@ -1,0 +1,99 @@
+version: 1
+name: forge_ide_workbench
+
+# 1) UI containment (spatial layout; not a DAG, just a tree)
+ui_tree:
+  root: app_shell
+  nodes:
+    app_shell:
+      kind: container
+      children: [header, body_split, terminal, status_bar]
+    header:
+      kind: toolbar
+    body_split:
+      kind: split(horizontal)   # left sidebar + main editor
+      children: [sidebar, editor]
+    sidebar:
+      kind: nav_tree            # file tree
+    editor:
+      kind: code_editor
+    terminal:
+      kind: console_dock        # bottom dock
+    status_bar:
+      kind: status_line
+
+# 2) Dataflow DAG (ViewModel slices → renderer → DOM)
+dataflow:
+  nodes:
+    vm_source:
+      kind: server_stream       # WS snapshot/diff → ViewModel
+      outputs: [vm]
+    vm_router:
+      kind: vm_demux            # split ViewModel into slices
+      inputs: [vm]
+      outputs: [vm_header, vm_tree, vm_editor, vm_terminal, vm_status]
+    render_header:
+      kind: renderer
+      inputs: [vm_header]
+      outputs: [dom_header]
+    render_sidebar:
+      kind: renderer
+      inputs: [vm_tree]
+      outputs: [dom_sidebar]
+    render_editor:
+      kind: renderer
+      inputs: [vm_editor]
+      outputs: [dom_editor]
+    render_terminal:
+      kind: renderer
+      inputs: [vm_terminal]
+      outputs: [dom_terminal]
+    render_status:
+      kind: renderer
+      inputs: [vm_status]
+      outputs: [dom_status]
+    dom_patcher:
+      kind: dom_apply           # applies patches to real DOM
+      inputs: [dom_header, dom_sidebar, dom_editor, dom_terminal, dom_status]
+
+  edges:
+    - vm_source.vm -> vm_router.vm
+    - vm_router.vm_header -> render_header.vm_header
+    - vm_router.vm_tree   -> render_sidebar.vm_tree
+    - vm_router.vm_editor -> render_editor.vm_editor
+    - vm_router.vm_terminal -> render_terminal.vm_terminal
+    - vm_router.vm_status -> render_status.vm_status
+    - render_header.dom_header -> dom_patcher.dom_header
+    - render_sidebar.dom_sidebar -> dom_patcher.dom_sidebar
+    - render_editor.dom_editor -> dom_patcher.dom_editor
+    - render_terminal.dom_terminal -> dom_patcher.dom_terminal
+    - render_status.dom_status -> dom_patcher.dom_status
+
+# 3) Intent DAG (UI events → intent_bus → server)
+intents:
+  nodes:
+    header_events:   { emits: [SelectProject, RunCmd, BuildCmd] }
+    tree_events:     { emits: [OpenFile, ToggleDir] }
+    editor_events:   { emits: [SaveFile, CursorMove, EditRange] }
+    terminal_events: { emits: [ClearLogs] }
+    status_events:   { emits: [Reconnect] }
+    intent_bus:
+      kind: aggregator
+      inputs: [SelectProject, RunCmd, BuildCmd, OpenFile, ToggleDir, SaveFile, CursorMove, EditRange, ClearLogs, Reconnect]
+      outputs: [intents_stream]
+    server_sink:
+      kind: ws_sink
+      inputs: [intents_stream]
+
+  edges:
+    - header_events.SelectProject -> intent_bus.SelectProject
+    - header_events.RunCmd        -> intent_bus.RunCmd
+    - header_events.BuildCmd      -> intent_bus.BuildCmd
+    - tree_events.OpenFile        -> intent_bus.OpenFile
+    - tree_events.ToggleDir       -> intent_bus.ToggleDir
+    - editor_events.SaveFile      -> intent_bus.SaveFile
+    - editor_events.CursorMove    -> intent_bus.CursorMove
+    - editor_events.EditRange     -> intent_bus.EditRange
+    - terminal_events.ClearLogs   -> intent_bus.ClearLogs
+    - status_events.Reconnect     -> intent_bus.Reconnect
+    - intent_bus.intents_stream   -> server_sink.intents_stream

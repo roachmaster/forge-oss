@@ -1,37 +1,37 @@
-// crates/forge-web-ui/src/display.rs
-use crate::vm::*;
+use forge_view_model::*;
 use crate::viewcore::Display;
 
-#[derive(Default)]
+/// Concrete Display used by the UI.
+#[derive(Debug, Clone, Default)]
 pub struct WorkbenchDisplay {
-    header: HeaderVM,
-    tree: TreeVM,
-    editor: EditorVM,
-    terminal: TerminalVM,
-    status: StatusVM,
+    pub header: HeaderVM,
+    pub tree: TreeVM,
+    pub editor: EditorVM,
+    pub terminal: TerminalVM,
+    pub status: StatusVM,
 }
 
 impl WorkbenchDisplay {
+    pub fn new_empty() -> Self { Self::default() }
+
+    /// For dev only: wrap the mock VM
     pub fn new_mock() -> Self {
+        let vm = crate::mock_display::make_mock_vm();
         Self {
-            header: HeaderVM { title: "Forge IDE".into(), can_build: true, can_run: true },
-            tree: TreeVM { roots: vec![TreeNodeVM {
-                name: "crates".into(), is_dir: true, open: true, children: vec![
-                    TreeNodeVM { name: "forge-web-ui".into(), is_dir: true, open: true, children: vec![
-                        TreeNodeVM { name: "src".into(), is_dir: true, open: true, children: vec![
-                            TreeNodeVM { name: "lib.rs".into(), is_dir: false, open: false, children: vec![] },
-                        ]},
-                    ]},
-                ],
-            }]},
-            editor: EditorVM {
-                file_path: "crates/forge-web-ui/src/lib.rs".into(),
-                content: "fn main() {}".into(),
-                cursor_line: 1, cursor_col: 1, is_dirty: false,
-            },
-            terminal: TerminalVM { lines: vec!["trunk serve…".into()], is_busy: false },
-            status: StatusVM { msg: "Ready".into(), connected: true },
+            header: vm.header,
+            tree: vm.tree,
+            editor: vm.editor,
+            terminal: vm.terminal,
+            status: vm.status,
         }
+    }
+
+    pub fn apply_snapshot(&mut self, vm: WorkbenchVM) {
+        self.header = vm.header;
+        self.tree = vm.tree;
+        self.editor = vm.editor;
+        self.terminal = vm.terminal;
+        self.status = vm.status;
     }
 }
 

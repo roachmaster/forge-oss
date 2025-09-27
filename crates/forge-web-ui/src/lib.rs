@@ -1,11 +1,11 @@
 // crates/forge-web-ui/src/lib.rs
 use wasm_bindgen::prelude::*;
 
-mod vm;
 mod viewcore;
 mod display;
 mod views;
 mod dom;
+mod mock_display;
 
 use display::WorkbenchDisplay;
 use views::{HeaderView, SidebarView, EditorView, TerminalView, StatusView};
