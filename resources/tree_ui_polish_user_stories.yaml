@@ -1,0 +1,159 @@
+version: 1
+name: tree_ui_polish_user_stories
+epics:
+  - id: E1
+    title: "Collapsible, informative file tree"
+    goal: "Users can browse a fast, accessible tree with icons and metadata; state persists."
+
+stories:
+  - id: S1
+    epic: E1
+    title: "As a user, I can expand/collapse directories"
+    description: "Clicking a directory chevron toggles its open state and reveals or hides children."
+    acceptance_criteria:
+      - "Clicking chevron toggles `open` state for that node."
+      - "UI updates without full page reload; only the subtree rerenders."
+      - "ARIA: `role=treeitem` with `aria-expanded` reflects state."
+      - "Keyboard: → expands when collapsed; ← collapses when expanded (basic)."
+    tasks:
+      - "Add `path`, `open`, `has_children` to TreeNodeVM (if missing)."
+      - "SidebarView renders `<li>` with `data-path`, `data-dir`, `aria-expanded`."
+      - "render.rs handles chevron click → optimistic toggle + emit `ToggleDir { path, open }`."
+      - "Persist expanded set to localStorage keyed by repo root."
+    priority: High
+    estimate: "3 pts"
+    depends_on: []
+
+  - id: S2
+    epic: E1
+    title: "As a user, I see appropriate icons for dirs and files"
+    description: "Visual differentiation between folders and common file types."
+    acceptance_criteria:
+      - "Closed/open folder icons for directories."
+      - "File-type icons for common extensions (rs, toml, md, json, sh); fallback for others."
+      - "Icons are purely presentational and do not affect selection hitbox."
+    tasks:
+      - "Create `policies/tree_policy.rs` with `icon_class(is_dir, open, ext)`."
+      - "Extend style.css-injector classes for icons & chevrons."
+      - "Views call policy to assign class; no logic in views."
+    priority: Medium
+    estimate: "2 pts"
+    depends_on: []
+
+  - id: S3
+    epic: E1
+    title: "As a user, I can see lightweight metadata (size)"
+    description: "Show humanized size next to files for quick scanning."
+    acceptance_criteria:
+      - "Files display right-aligned size (e.g., 1.2 KB, 3.4 MB)."
+      - "Directories do not show size."
+      - "Layout remains readable on narrow widths."
+    tasks:
+      - "Backend fs_tree includes `meta.size` for files (bytes)."
+      - "Add `human_size(size)` policy; SidebarView renders if present."
+      - "CSS: muted typography for meta; truncation does not overlap filename."
+    priority: Medium
+    estimate: "2 pts"
+    depends_on: [S6]
+
+  - id: S4
+    epic: E1
+    title: "As a user, my tree state persists across reloads"
+    description: "Expanded directories and last selected item are remembered per repo."
+    acceptance_criteria:
+      - "Reloading the page restores expanded/collapsed state."
+      - "State is scoped by repo root path; different repos do not clash."
+    tasks:
+      - "globals.rs adds `TreeState { expanded:Set<path>, selected:Option<path> }`."
+      - "LocalStorage read on startup; write on toggle/selection."
+      - "Snapshot merge: client expanded set wins over server default `open`."
+    priority: High
+    estimate: "2 pts"
+    depends_on: [S1]
+
+  - id: S5
+    epic: E1
+    title: "As a keyboard user, I can navigate the tree"
+    description: "Basic arrow-key navigation with expand/collapse and open file."
+    acceptance_criteria:
+      - "↑/↓ move selection among visible items."
+      - "→ expands a collapsed dir; if already expanded, selects first child."
+      - "← collapses an expanded dir; if collapsed, moves to parent."
+      - "Enter opens file (sends OpenFile intent)."
+      - "Visible focus ring and `tabindex` management (one tabbable item)."
+    tasks:
+      - "render.rs adds keydown handlers on tree container."
+      - "globals TreeState tracks `selected`."
+      - "ARIA roles `tree`, `group`, `treeitem` applied."
+    priority: Medium
+    estimate: "3 pts"
+    depends_on: [S1, S4]
+
+  - id: S6
+    epic: E1
+    title: "As a developer, the backend provides enriched tree nodes"
+    description: "Server supplies path, has_children, and size metadata."
+    acceptance_criteria:
+      - "`TreeNodeVM.path` is repo-relative, stable, unique."
+      - "`has_children` is true for non-empty dirs (even when collapsed)."
+      - "`meta.size` present for files; not set for directories."
+      - "Respects .gitignore and depth cap."
+    tasks:
+      - "Update forge-view-model types (update) to include fields."
+      - "Update services/fs_tree.rs to compute path/has_children/size."
+      - "Unit tests for large directories & ignored files."
+    priority: High
+    estimate: "3 pts"
+    depends_on: []
+
+  - id: S7
+    epic: E1
+    title: "As a user, toggling a directory is instant and resilient"
+    description: "Optimistic UI toggle with optional server persistence."
+    acceptance_criteria:
+      - "Toggle feels instant (no spinner)."
+      - "If server rejects/changes state, next snapshot reconciles smoothly."
+    tasks:
+      - "ws.rs send `ClientIntent::ToggleDir { path, open }`."
+      - "api/mod.rs accept ToggleDir; optionally store preference (noop acceptable for now)."
+      - "Define reconciliation rule: client expanded set overrides server `open` on render."
+    priority: Medium
+    estimate: "2 pts"
+    depends_on: [S1, S6]
+
+  - id: S8
+    epic: E1
+    title: "As a user, clicking a file opens it in the editor"
+    description: "Tree click sends intent; server responds with snapshot including editor content."
+    acceptance_criteria:
+      - "Single click selects; Enter/double-click opens."
+      - "Editor displays file content; status shows file path."
+    tasks:
+      - "render.rs dispatch `OpenFile { path }` using `data-path`."
+      - "api/mod.rs handle `OpenFile` with services::editor; include content in snapshot."
+      - "Basic error handling: toast/status if read fails."
+    priority: High
+    estimate: "3 pts"
+    depends_on: [S6]
+
+  - id: S9
+    epic: E1
+    title: "As a QA, I have automated checks for tree behavior"
+    description: "Unit, contract, and view snapshot tests."
+    acceptance_criteria:
+      - "fs_tree unit tests cover size/has_children/path and .gitignore."
+      - "VM JSON contract test between server and client."
+      - "SidebarView snapshot test includes icons/meta classes."
+    tasks:
+      - "Add tests in forge-workbenchd/services and forge-view-model."
+      - "Add wasm view rendering test (headless) or deterministic VNode snapshot."
+    priority: Medium
+    estimate: "3 pts"
+    depends_on: [S2, S3, S6]
+
+definitions_of_done:
+  - "All acceptance criteria pass for each story."
+  - "No console errors in browser; WS connects/reconnects successfully."
+  - "Rust fmt/clippy clean; wasm size does not regress >5% without reason."
+  - "Unit tests & contract tests pass in CI."
+  - "Accessibility basics verified (screen-reader tree roles, keyboard nav)."

@@ -1,0 +1,212 @@
+version: 1
+name: forge_ide_tree_polish
+scope:
+  goals:
+    - Collapsible directories (toggle open/closed)
+    - Icons/styling for dirs & files (ext-based)
+    - File metadata (size; optional mtime)
+    - Keep view dumb; UI state separate; server owns FS facts
+  principles: [SRP, OCP, LSP, ISP, DIP]
+
+shared_vm (crates/forge-view-model/src/lib.rs):
+  action: update
+  reason: enable toggling + precise file targeting + metadata
+  changes:
+    - add_fields:
+        TreeNodeVM:
+          path: { type: String, desc: "repo-relative canonical path (id)" }
+          has_children: { type: bool, desc: "true if dir has children (for lazy UI)" }
+          meta:
+            size: { type: Option<u64>, desc: "bytes for files; None for dirs" }
+            mtime: { type: Option<u64>, desc: "epoch seconds; optional" }
+        # keep: name, is_dir, open, children
+    - protocol:
+        ClientIntent:
+          - ToggleDir { path: String, open: bool }   # new
+          - OpenFile { path: String }                # keep
+        ServerToClient:                               # no breaking change
+          - Snapshot { vm: WorkbenchVM }              # keep
+          # (future) Delta events can be added later; no change now
+
+frontend (crates/forge-web-ui):
+  modules:
+    - path: src/views.rs
+      action: update
+      responsibility: "Pure views → VNode"
+      changes:
+        - SidebarView:
+            - render <li> with data-path (full path), data-dir, aria-expanded (for dirs)
+            - include icon span with class from policy (dir_open/dir_closed/file_ext)
+            - right-aligned meta: humanized size (if present) for files
+            - do not bind events here; stay pure
+    - path: src/render.rs
+      action: update
+      responsibility: "Render pass + DOM event delegation"
+      changes:
+        - click handling:
+            - clicking chevron on a dir toggles open/closed (update local TreeState; emit ToggleDir)
+            - clicking file emits OpenFile with data-path
+        - keyboard (optional, staged): ↑/↓ select, → expand/open, ← collapse
+    - path: src/style.rs
+      action: update
+      responsibility: "Global CSS"
+      changes:
+        - add chevron icons (open/closed) via CSS classes
+        - icon classes per file type (e.g., .icon-rs, .icon-toml, .icon-md, .icon-generic)
+        - row layout: icon/name left; size metadata right; hover/selected states
+    - path: src/globals.rs
+      action: update
+      responsibility: "Thread-local singletons & UI-only state"
+      changes:
+        - add TreeState (client-local)
+          TreeState:
+            expanded: Set<String>     # paths of expanded dirs
+            selected: Option<String>  # selected path
+          helpers:
+            read/write localStorage by repo-key
+            with_treestate(_/mut) closures
+    - path: src/ws.rs
+      action: update
+      responsibility: "Transport + session lifecycle"
+      changes:
+        - send ToggleDir intents on dir toggle
+        - on Snapshot, merge server ‘open’ with local expanded set (client wins for user prefs)
+        - reconnect/backoff (optional later)
+    - path: src/display.rs
+      action: update
+      responsibility: "Snapshot holder for Views"
+      changes:
+        - no behavior change; ensure accessors expose new vm fields
+    - path: src/dom.rs
+      action: keep
+      responsibility: "VNode → real DOM; style injector"
+      changes: []
+    - path: src/viewcore.rs
+      action: keep
+      responsibility: "VNode, Display, View traits"
+      changes: []
+    - path: src/mock_display.rs
+      action: update
+      responsibility: "Dev-only seed data"
+      changes:
+        - ensure nodes contain path, has_children, and sample meta.size
+        - mark some dirs closed by default to show toggling
+    - path: src/policies/tree_policy.rs
+      action: new
+      responsibility: "Strategy for icon & meta formatting"
+      api:
+        - fn icon_class(is_dir: bool, open: bool, ext: &str) -> &'static str
+        - fn human_size(size: Option<u64>) -> String
+      notes: "Pure functions only; Views call into this for classes/labels"
+
+backend (crates/forge-workbenchd):
+  modules:
+    - path: src/services/fs_tree.rs
+      action: update
+      responsibility: "FS → TreeVM"
+      changes:
+        - populate TreeNodeVM.path (relative to root)
+        - set has_children for dirs (cheap peek into iterator)
+        - set meta.size for files (from DirEntry.metadata().len())
+        - (optional) set mtime (metadata.modified())
+        - respect max depth; optionally mark dirs with has_children even when not expanded
+    - path: src/services/editor.rs
+      action: new
+      responsibility: "Read file content safely under root"
+      api:
+        - fn read_file_under_root(root: &Path, rel: &str) -> Option<String>
+    - path: src/api/mod.rs
+      action: update
+      responsibility: "HTTP/WS routing"
+      changes:
+        - WS: handle ClientIntent::ToggleDir { path, open }:
+            policy:
+              - record preference (optional) or ignore if server stateless
+              - rebuild snapshot with same FS facts; ‘open’ may be passed through from client state if storing server-side
+        - WS: handle ClientIntent::OpenFile { path }:
+            - read content via services::editor and include in returned Snapshot.editor
+    - path: src/middleware.rs
+      action: keep
+      changes: []
+    - path: src/config.rs
+      action: keep
+      changes: []
+    - path: src/main.rs
+      action: keep
+      changes: []
+
+ui_state_policy:
+  ownership:
+    server: "FS facts (names, structure, sizes, mtimes)"
+    client: "UI prefs (expanded/selected), persisted to localStorage"
+  merge_on_snapshot:
+    rule: "Client-expanded set overrides server ‘open’ flags on render"
+  intents:
+    - ToggleDir: "send to server (optional persistence), update client immediately (optimistic)"
+    - OpenFile: "always sent; server responds with editor content in next Snapshot"
+
+icons_and_meta:
+  mapping:
+    directories:
+      icon_open: "icon-dir-open"
+      icon_closed: "icon-dir"
+    extensions:
+      rs: "icon-rs"
+      toml: "icon-toml"
+      md: "icon-md"
+      json: "icon-json"
+      sh: "icon-sh"
+      default: "icon-file"
+  formatting:
+    size: "human_size(size) -> '1.2 KB', '3.4 MB' (policy fn)"
+    mtime: "(optional) tooltip formatted local time"
+
+accessibility:
+  tree_roles:
+    container: { role: "tree" }
+    group: { role: "group" }
+    item: { role: "treeitem", aria_expanded: "true|false for dirs" }
+  keyboard:
+    up_down: "move selection"
+    right: "expand/open"
+    left: "collapse"
+    enter: "open file"
+
+performance:
+  now: "nested <ul> render (small/medium repos)"
+  later:
+    - flat_list_with_depth + virtualization for large repos
+    - lazy_children: only request children on first expand
+
+testing:
+  unit:
+    - fs_tree: "size/mtime/path population; respect depth; .gitignore"
+    - policies: "icon_class/human_size"
+  contract:
+    - VM JSON round-trip client/server
+  view_snapshot:
+    - SidebarView renders correct classes & attributes for sample trees
+  integration:
+    - WS cycle: ToggleDir & OpenFile flows apply to Display and re-render
+
+rollout_steps:
+  - update forge-view-model (paths/meta + ToggleDir)
+  - backend fs_tree updates (path/meta/has_children)
+  - add services/editor.rs (new)
+  - frontend:
+      - policies/tree_policy.rs (new)
+      - SidebarView renders data-path + icons + meta (update)
+      - render.rs toggling & OpenFile intent with data-path (update)
+      - style.rs classes for icons/chevrons/layout (update)
+      - globals.rs TreeState + localStorage persistence (update)
+      - ws.rs send ToggleDir; merge open state (update)
+      - mock_display.rs include path/meta & closed examples (update)
+  - verify: click-to-toggle, icons visible, sizes displayed, open file works
+
+notes:
+  non_breaking_changes:
+    - Server can ignore ToggleDir if it doesn’t persist UI prefs; client still toggles locally.
+  future:
+    - Git decorations (modified/ignored/untracked) via services::git_meta
+    - Delta protocol for incremental updates (TreeDelta)
+    - Keyboard navigation & focus management
