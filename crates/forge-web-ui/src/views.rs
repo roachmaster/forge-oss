@@ -71,7 +71,7 @@ impl<D: Display> View<D> for SidebarView {
                 row = row.with_child(chev)
                          .with_child(VNode::el("span").with_attr("class", "icon folder"));
             } else {
-                row = row.with_child(VNode::el("span").with_attr("class", "chevron")) // empty spacer for alignment
+                row = row.with_child(VNode::el("span").with_attr("class", "spacer")) // empty spacer for alignment
                          .with_child(VNode::el("span").with_attr("class", "icon file"));
             }
             row = row.with_child(
