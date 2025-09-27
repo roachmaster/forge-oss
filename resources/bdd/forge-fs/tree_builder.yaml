@@ -1,0 +1,93 @@
+crate: forge-fs
+test_mod: glue
+
+scenarios:
+  - name: build_a_tree_from_mixed_files_and_dirs
+    description: "Builds a tree from mixed files and directories and preserves nesting."
+    facade_file: tests/scenario_build_a_tree_from_mixed_files_and_dirs.rs
+    glue_file: tests/glue/build_a_tree_from_mixed_files_and_dirs.rs
+    steps:
+      - set_up_and_get_paths
+      - execute_and_return_build_build_simple_tree
+      - verify_tree_files
+      - and_verify_dirs
+
+  - name: de_duplicate_repeated_paths
+    description: "Multiple mentions of the same file/dir do not produce duplicate nodes."
+    facade_file: tests/scenario_de_duplicate_repeated_paths.rs
+    glue_file: tests/glue/de_duplicate_repeated_paths.rs
+    steps:
+      - set_up_and_get_paths_with_duplicates
+      - execute_and_return_build_build_simple_tree
+      - verify_no_duplicate_dirs
+      - and_verify_no_duplicate_files
+
+  - name: sort_dirs_first_then_alpha
+    description: "Children are sorted with directories first, then files, both case-insensitive alpha."
+    facade_file: tests/scenario_sort_dirs_first_then_alpha.rs
+    glue_file: tests/glue/sort_dirs_first_then_alpha.rs
+    steps:
+      - set_up_mixed_unsorted_children
+      - execute_and_return_build_build_simple_tree
+      - verify_dirs_listed_before_files
+      - and_verify_case_insensitive_alpha_order
+
+  - name: preserve_directory_hierarchy_depth
+    description: "Deep nested paths create the correct depth and parent-child relations."
+    facade_file: tests/scenario_preserve_directory_hierarchy_depth.rs
+    glue_file: tests/glue/preserve_directory_hierarchy_depth.rs
+    steps:
+      - set_up_deep_nested_paths
+      - execute_and_return_build_build_simple_tree
+      - verify_each_segment_is_a_dir
+      - and_verify_leaf_nodes_are_files
+
+  - name: handle_unicode_and_spaces_in_paths
+    description: "Paths with unicode and spaces are accepted and placed correctly."
+    facade_file: tests/scenario_handle_unicode_and_spaces_in_paths.rs
+    glue_file: tests/glue/handle_unicode_and_spaces_in_paths.rs
+    steps:
+      - set_up_paths_with_unicode_and_spaces
+      - execute_and_return_build_build_simple_tree
+      - verify_unicode_nodes_exist
+      - and_verify_spaces_nodes_exist
+
+  - name: tolerate_leading_trailing_slashes
+    description: "Leading or trailing slashes in rel paths are ignored during insertion."
+    facade_file: tests/scenario_tolerate_leading_trailing_slashes.rs
+    glue_file: tests/glue/tolerate_leading_trailing_slashes.rs
+    steps:
+      - set_up_paths_with_leading_and_trailing_slashes
+      - execute_and_return_build_build_simple_tree
+      - verify_normalized_structure
+      - and_verify_no_duplicate_nodes_from_slashes
+
+  - name: idempotent_insertion_order
+    description: "Inserting the same set of paths in different orders yields identical trees."
+    facade_file: tests/scenario_idempotent_insertion_order.rs
+    glue_file: tests/glue/idempotent_insertion_order.rs
+    steps:
+      - set_up_two_permutations_of_same_paths
+      - execute_build_tree_for_each_permutation
+      - verify_structural_equality_between_trees
+      - and_verify_sorted_order_in_each_tree
+
+  - name: root_only_files_no_dirs
+    description: "Handles a repo with only root-level files, no subdirectories."
+    facade_file: tests/scenario_root_only_files_no_dirs.rs
+    glue_file: tests/glue/root_only_files_no_dirs.rs
+    steps:
+      - set_up_root_only_files
+      - execute_and_return_build_build_simple_tree
+      - verify_all_files_are_direct_children_of_root
+      - and_verify_no_dir_nodes_created
+
+  - name: deep_nested_paths
+    description: "Correctly constructs very deep directory chains with a single leaf file."
+    facade_file: tests/scenario_deep_nested_paths.rs
+    glue_file: tests/glue/deep_nested_paths.rs
+    steps:
+      - set_up_very_deep_path_chain
+      - execute_and_return_build_build_simple_tree
+      - verify_depth_matches_segments
+      - and_verify_single_leaf_file_present
