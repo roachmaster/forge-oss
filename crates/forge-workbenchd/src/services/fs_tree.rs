@@ -4,6 +4,12 @@ use std::path::{Path, PathBuf};
 
 /// Build a full snapshot (header + tree + empty editor/terminal/status).
 pub fn build_snapshot(root: &Path, depth: usize) -> WorkbenchVM {
+    // Stable repo identifier for client-side persistence (e.g., localStorage namespace)
+    let repo_id = std::fs::canonicalize(root)
+        .ok()
+        .and_then(|p| p.to_str().map(|s| s.to_string()))
+        .unwrap_or_else(|| root.display().to_string());
+
     WorkbenchVM {
         header: HeaderVM {
             title: root
@@ -12,6 +18,7 @@ pub fn build_snapshot(root: &Path, depth: usize) -> WorkbenchVM {
                 .unwrap_or_else(|| "project".into()),
             can_build: true,
             can_run: true,
+            repo_id,
         },
         tree: build_tree(root, depth),
         editor: EditorVM::default(),
