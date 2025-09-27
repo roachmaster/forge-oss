@@ -2,12 +2,19 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <title>Forge Web UI</title>
-    <!-- Trunk builds this crate and wires the wasm automatically -->
-    <link data-trunk rel="rust" href="Cargo.toml" />
+    <title>Forge IDE Workbench</title>
+    <!-- Trunk will compile the Rust crate and attach the wasm -->
+    <link data-trunk rel="rust" href="Cargo.toml" data-cargo-features="dev" />
   </head>
-  <body style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; padding: 2rem;">
-    <!-- Rust will replace this body content on start -->
-    Loading…
+  <body>
+    <div id="app-shell">
+      <header id="header"></header>
+      <main id="body">
+        <nav id="sidebar"></nav>
+        <section id="editor"></section>
+      </main>
+      <section id="terminal"></section>
+      <footer id="status"></footer>
+    </div>
   </body>
 </html>
