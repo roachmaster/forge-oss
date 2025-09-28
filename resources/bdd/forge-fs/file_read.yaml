@@ -1,0 +1,66 @@
+crate: forge-fs
+test_mod: glue
+
+scenarios:
+  - name: read_simple_file_contents
+    description: "Reads a small text file and returns its full contents as a string."
+    facade_file: tests/scenario_read_simple_file_contents.rs
+    glue_file: tests/glue/read_simple_file_contents.rs
+    steps:
+      - set_up_temp_file_with_known_text
+      - execute_read_file_contents
+      - verify_contents_match_expected
+
+  - name: handle_nonexistent_file
+    description: "Returns an error or fails gracefully when the file does not exist."
+    facade_file: tests/scenario_handle_nonexistent_file.rs
+    glue_file: tests/glue/handle_nonexistent_file.rs
+    steps:
+      - set_up_nonexistent_path
+      - execute_read_file_contents
+      - verify_error_is_returned
+
+  - name: read_large_file
+    description: "Successfully reads a large file and returns complete contents."
+    facade_file: tests/scenario_read_large_file.rs
+    glue_file: tests/glue/read_large_file.rs
+    steps:
+      - set_up_large_temp_file
+      - execute_read_file_contents
+      - verify_full_large_content_read
+
+  - name: read_file_with_unicode_characters
+    description: "Reads a file containing Unicode text (emojis, accented letters, non-Latin scripts)."
+    facade_file: tests/scenario_read_file_with_unicode_characters.rs
+    glue_file: tests/glue/read_file_with_unicode_characters.rs
+    steps:
+      - set_up_file_with_unicode_content
+      - execute_read_file_contents
+      - verify_unicode_content_preserved
+
+  - name: read_empty_file
+    description: "Handles empty files and returns an empty string without error."
+    facade_file: tests/scenario_read_empty_file.rs
+    glue_file: tests/glue/read_empty_file.rs
+    steps:
+      - set_up_empty_file
+      - execute_read_file_contents
+      - verify_empty_result
+
+  - name: read_file_with_leading_trailing_whitespace
+    description: "Preserves whitespace including leading/trailing spaces and newlines in the file content."
+    facade_file: tests/scenario_read_file_with_leading_trailing_whitespace.rs
+    glue_file: tests/glue/read_file_with_leading_trailing_whitespace.rs
+    steps:
+      - set_up_file_with_whitespace
+      - execute_read_file_contents
+      - verify_whitespace_preserved
+
+  - name: handle_permission_denied
+    description: "Returns an appropriate error when the file cannot be read due to permissions."
+    facade_file: tests/scenario_handle_permission_denied.rs
+    glue_file: tests/glue/handle_permission_denied.rs
+    steps:
+      - set_up_file_with_denied_permissions
+      - execute_read_file_contents
+      - verify_permission_error_returned
