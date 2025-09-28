@@ -1,9 +1,10 @@
 // crates/forge-web-ui/src/http.rs
+
 use serde::de::DeserializeOwned;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};           // <-- add Deserialize
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{Request, RequestInit, Response, Headers, window};
+use web_sys::{window, Headers, Request, RequestInit, RequestMode, Response};
 
 /// Generic JSON POST helper for browser/WASM.
 ///
@@ -22,7 +23,7 @@ where
     // Build request init
     let mut init = RequestInit::new();
     init.method("POST");
-    init.mode(web_sys::RequestMode::SameOrigin);
+    init.mode(RequestMode::SameOrigin);
 
     // Headers
     let headers = Headers::new().map_err(|e| format!("headers error: {:?}", e))?;
@@ -49,9 +50,7 @@ where
     let text_js = JsFuture::from(resp.text().map_err(|e| format!("resp.text() error: {:?}", e))?)
         .await
         .map_err(|e| format!("read body error: {:?}", e))?;
-    let text = text_js
-        .as_string()
-        .unwrap_or_else(|| "".to_string());
+    let text = text_js.as_string().unwrap_or_default();
 
     if !ok {
         return Err(format!("HTTP {}: {}", status, text));

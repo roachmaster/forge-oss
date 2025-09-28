@@ -9,20 +9,39 @@ crate-type = ["cdylib"]   # required for wasm
 [dependencies]
 # --- WASM + Web bindings ---
 wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+
+# js-sys for Array/Function/Object/Promise/Reflect
+js-sys = "0.3"
+
+# web-sys with all DOM features we actually use
 web-sys = { version = "0.3", features = [
     # Core DOM
     "Window",
     "Document",
     "Element",
+    "EventTarget",
     "HtmlElement",
     "HtmlDocument",
     "HtmlHeadElement",
     "Node",
     "Text",
     "console",
+
+    # Style API (for element.style())
+    "CssStyleDeclaration",
+
     # Storage / Location
     "Storage",
     "Location",
+
+    # Fetch + HTTP
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Headers",
+
     # WebSocket + events
     "WebSocket",
     "MessageEvent",
