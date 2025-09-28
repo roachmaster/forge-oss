@@ -1,4 +1,5 @@
 use wasm_bindgen::prelude::*;
+use crate::viewcore::Display; // trait needed at the top-level if used here
 use crate::viewcore::View;
 use crate::views::{HeaderView, SidebarView, EditorView, TerminalView, StatusView};
 use crate::globals::{with_display, with_dom};
@@ -27,27 +28,29 @@ fn render_views() {
     });
 }
 
-// ...top stays the same...
-
 mod interactions {
     use wasm_bindgen::prelude::*;
     use wasm_bindgen::JsCast;
     use web_sys::{window, Element, Event};
 
     use crate::forge_view_model::ClientIntent;
-    use crate::globals::with_treestate_mut;
+    use crate::globals::{with_treestate_mut, with_display};
     use crate::ws::send_intent;
+
+    // ⬇️ This is required so `d.editor()` works inside this module.
+    use crate::viewcore::Display;
 
     /// Facade: wire all component interactions.
     pub fn wire_all() {
         wire_sidebar_clicks();
     }
 
-    /// Sidebar: directory row click toggles open/close; file row click opens file.
+    /// Sidebar: directory row click toggles; file row click opens file.
     fn wire_sidebar_clicks() {
         let doc = match window().and_then(|w| w.document()) { Some(d) => d, None => return };
         let Some(sidebar) = doc.get_element_by_id("sidebar") else { return };
 
+        // avoid double-binding on re-render
         if sidebar.get_attribute("data-bound").as_deref() == Some("1") {
             return;
         }
@@ -59,7 +62,7 @@ mod interactions {
                 None => return,
             };
 
-            // Find owning <li>
+            // find owning <li>
             let li = if el.tag_name().eq_ignore_ascii_case("li") {
                 el
             } else {
@@ -73,23 +76,34 @@ mod interactions {
             let is_dir = li.get_attribute("data-dir").as_deref() == Some("true");
 
             if is_dir {
-                // Optimistic toggle using TreeState
+                // optimistic toggle
                 let mut new_open = false;
                 with_treestate_mut(|ts| {
                     new_open = ts.toggle(&path);
                 });
 
-                // Tell the server (idempotent target state)
+                // tell server
                 send_intent(ClientIntent::ToggleDir { path, open: new_open });
 
-                // Rerender so UI reflects the new state
+                // re-render
                 e.stop_propagation();
-                crate::render::render_all();   // <— re-render now
+                crate::render::render_all();
                 return;
             }
 
-            // Files: open
-            send_intent(ClientIntent::OpenFile { path });
+            // files: include currently known editor sha if we have one
+            let known_sha: Option<String> = {
+                let mut s: Option<String> = None;
+                with_display(|d| {
+                    let e = d.editor();
+                    if !e.sha256.is_empty() {
+                        s = Some(e.sha256.clone());
+                    }
+                });
+                s
+            };
+
+            send_intent(ClientIntent::OpenFile { path, known_sha });
         }) as Box<dyn FnMut(_)>);
 
         let _ = sidebar.add_event_listener_with_callback("click", closure.as_ref().unchecked_ref());

@@ -33,17 +33,62 @@ pub fn connect_ws() {
     let onmessage = Closure::<dyn FnMut(MessageEvent)>::wrap(Box::new(move |e: MessageEvent| {
         if let Some(txt) = e.data().as_string() {
             if let Ok(msg) = serde_json::from_str::<ServerToClient>(&txt) {
-                // Only variant for now; a plain `let` avoids the irrefutable `if let` warning.
-                let ServerToClient::Snapshot { vm } = msg;
-                with_display_mut(|d| d.apply_snapshot(vm));
-                render_all();
+                match msg {
+                    ServerToClient::Snapshot { vm } => {
+                        with_display_mut(|d| d.apply_snapshot(vm));
+                        render_all();
+                    }
+                    ServerToClient::FileOpened {
+                        path, content, size_bytes, char_count, line_count, sha256
+                    } => {
+                        with_display_mut(|d| {
+                            let mut vm = WorkbenchVM::default();
+                            vm.header   = d.header.clone();
+                            vm.tree     = d.tree.clone();
+                            vm.terminal = d.terminal.clone();
+                            vm.status   = d.status.clone();
+
+                            vm.editor = d.editor.clone();
+                            vm.editor.file_path  = path;
+                            vm.editor.content    = content;
+                            vm.editor.size_bytes = size_bytes as usize;
+                            vm.editor.char_count = char_count;
+                            vm.editor.line_count = line_count;
+                            vm.editor.sha256     = sha256;
+                            vm.editor.is_dirty   = false;
+
+                            d.apply_snapshot(vm);
+                        });
+                        render_all();
+                    }
+                    ServerToClient::FileUnchanged {
+                        path, size_bytes, char_count, line_count, sha256
+                    } => {
+                        with_display_mut(|d| {
+                            let mut vm = WorkbenchVM::default();
+                            vm.header   = d.header.clone();
+                            vm.tree     = d.tree.clone();
+                            vm.terminal = d.terminal.clone();
+                            vm.status   = d.status.clone();
+
+                            vm.editor = d.editor.clone(); // keep existing content
+                            vm.editor.file_path  = path;
+                            vm.editor.size_bytes = size_bytes as usize;
+                            vm.editor.char_count = char_count;
+                            vm.editor.line_count = line_count;
+                            vm.editor.sha256     = sha256;
+
+                            d.apply_snapshot(vm);
+                        });
+                        render_all();
+                    }
+                }
             }
         }
     }) as Box<dyn FnMut(_)>);
     ws.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
     onmessage.forget();
 }
-
     set_ws(ws);
 }
 

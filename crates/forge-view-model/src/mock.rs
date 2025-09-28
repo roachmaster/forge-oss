@@ -18,14 +18,15 @@ pub fn mock_workbench(repo_id: impl Into<String>) -> WorkbenchVM {
         },
         tree: mock_tree(),
         editor: EditorVM {
-            file_path: "README.md".into(),
-            content:  "# Hello Forge\n\nThis is mock content.".into(),
+            file_path:  "README.md".into(),
+            content:    "# Hello Forge\n\nThis is mock content.".into(),
             cursor_line: 0,
             cursor_col:  0,
             is_dirty:    false,
             size_bytes:  30,
             char_count:  30,
             line_count:  3,
+            sha256:      "mock-sha256".into(), // NEW: mock/dummy hash
         },
         terminal: TerminalVM { lines: vec!["mock: ready".into()], is_busy: false },
         status:   StatusVM   { msg: "Connected (mock)".into(), connected: true },
@@ -33,7 +34,6 @@ pub fn mock_workbench(repo_id: impl Into<String>) -> WorkbenchVM {
 }
 
 pub fn mock_tree() -> TreeVM {
-    use TreeNodeVM as N;
     TreeVM {
         roots: vec![
             dir(".", "forge-oss", vec![

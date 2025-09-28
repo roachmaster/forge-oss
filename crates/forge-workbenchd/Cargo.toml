@@ -15,3 +15,4 @@ anyhow = "1"
 thiserror = "1"
 ignore = "0.4"         # respects .gitignore when scanning files
 forge-view-model = { path = "../forge-view-model" }
+forge-fs = { path = "../forge-fs" }
