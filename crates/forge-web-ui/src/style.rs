@@ -11,10 +11,20 @@ html, body {
   grid-template-rows:auto 1fr auto auto;
   height:100%;
 }
+/* Important: allow grid children to actually scroll */
 #body {
   display:grid;
   grid-template-columns: 260px 1fr;
   overflow:hidden;
+  min-height:0;
+}
+
+/* --- Sidebar container (scrollable region) --- */
+#sidebar {
+  overflow-y: auto;              /* vertical scrollbar when needed */
+  min-height: 0;                 /* required to enable scrolling inside grid */
+  max-height: 100%;
+  -webkit-overflow-scrolling: touch; /* smooth scrolling on iOS/trackpads */
 }
 
 /* --- Tree / Sidebar --- */
@@ -63,6 +73,7 @@ li[data-open="true"] > .tree-row > .chevron::before { content:"▾"; }
   font-family:monospace;
   padding:8px 10px;
   overflow:auto;
+  min-height:0;
 }
 #header {
   background:#222; color:#eee;
