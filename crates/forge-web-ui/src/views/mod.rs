@@ -4,9 +4,11 @@ pub mod sidebar;
 pub mod editor;
 pub mod terminal;
 pub mod status;
+pub mod toolbar;
 
 pub use header::HeaderView;
 pub use sidebar::SidebarView;
 pub use editor::EditorView;
 pub use terminal::TerminalView;
 pub use status::StatusView;
+pub use toolbar::ToolbarView;

@@ -1,0 +1,71 @@
+header:
+  file: design_tokens.yaml
+  template: css_from_tokens.mustache
+  type: dto
+
+payload:
+  # Each struct is a token group. Field *values* are literal CSS values.
+  structs:
+    - name: Colors
+      fields:
+        bg: "#0d0d0d"
+        fg: "#efefef"
+        primary: "#7c3aed"
+        primary_fg: "#ffffff"
+        success: "#16a34a"
+        warning: "#f59e0b"
+        danger: "#dc2626"
+        muted: "#6b7280"
+        border: "#1f2937"
+
+    - name: Spacing
+      fields:
+        xs: "0.25rem"
+        sm: "0.5rem"
+        md: "1rem"
+        lg: "1.5rem"
+        xl: "2rem"
+        "2xl": "3rem"
+
+    - name: Radius
+      fields:
+        sm: "4px"
+        md: "8px"
+        lg: "12px"
+        pill: "9999px"
+
+    - name: Shadow
+      fields:
+        sm: "0 1px 2px rgba(0,0,0,0.06)"
+        md: "0 4px 10px rgba(0,0,0,0.08)"
+        lg: "0 10px 24px rgba(0,0,0,0.12)"
+
+    - name: Font
+      fields:
+        family_sans: "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji"
+        family_mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace"
+        size_base: "16px"
+        size_sm: "14px"
+        size_lg: "18px"
+        weight_normal: "400"
+        weight_medium: "500"
+        weight_bold: "700"
+
+    # Example component-level tokens (still just key→value strings)
+    - name: Button
+      fields:
+        padding_inline: "var(--spacing-md)"
+        padding_block: "calc(var(--spacing-xs) + 2px)"
+        radius: "var(--radius-md)"
+        shadow: "var(--shadow-sm)"
+        bg: "var(--colors-primary)"
+        fg: "var(--colors-primary-fg)"
+        bg_hover: "color-mix(in oklab, var(--colors-primary) 90%, white 10%)"
+
+    - name: Card
+      fields:
+        padding: "var(--spacing-lg)"
+        radius: "var(--radius-lg)"
+        shadow: "var(--shadow-lg)"
+        bg: "var(--colors-bg)"
+        fg: "var(--colors-fg)"

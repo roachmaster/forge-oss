@@ -1,0 +1,16 @@
+[2025-10-01 22:15:13] FORGE_ROOT = /Users/leonardorocha/forge-oss
+[2025-10-01 22:15:13] Creating proc-macro crate: forgery-macros
+[2025-10-01 22:15:13] RUN: mkdir -p '/Users/leonardorocha/forge-oss/crates/forgery-macros/src'
+[2025-10-01 22:15:13] Writing /Users/leonardorocha/forge-oss/crates/forgery-macros/Cargo.toml
+[2025-10-01 22:15:13] Writing /Users/leonardorocha/forge-oss/crates/forgery-macros/src/lib.rs
+[2025-10-01 22:15:13] Helper missing; using fallback to add member: crates/forgery-macros
+[2025-10-01 22:15:13] Building crate…
+[2025-10-01 22:15:13] RUN: cargo build -p forgery-macros
+[1m[91merror[0m: [1minvalid table header
+duplicate key `workspace` in document root[0m
+  [1m[94m-->[0m Cargo.toml:20:1
+   [1m[94m|[0m
+[1m[94m20 |[0m [workspace]
+   [1m[94m|[0m [1m[91m^[0m
+   [1m[94m|[0m
+[2025-10-01 22:15:13] ❌ Aborted with exit code 101
