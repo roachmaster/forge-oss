@@ -2,6 +2,7 @@
 //! templating-ready variants derived from a snake_case baseline.
 
 use std::collections::BTreeMap;
+use serde_json::{Map as JsonMap, Value as J};
 
 /// Public API: expand a `(key, value)` pair into templating keys:
 /// - `{key_snake}_snake_case`
@@ -12,7 +13,6 @@ use std::collections::BTreeMap;
 ///
 /// The `key` and `value` are both sanitized, then each is normalized to snake_case.
 /// All other variants are derived from the *value*’s snake_case.
-///
 pub fn expand_pair(key: &str, value: &str) -> BTreeMap<String, String> {
     let clean_key = sanitize(key);
     let clean_val = sanitize(value);
@@ -39,6 +39,71 @@ pub fn expand_pair(key: &str, value: &str) -> BTreeMap<String, String> {
         snake_to_kebab(&val_snake),
     );
     out
+}
+
+/// Public helper: normalize any identifier into snake_case (system rule).
+pub fn to_snake(s: &str) -> String {
+    detect_and_to_snake(&sanitize(s))
+}
+
+/// Add struct name expansions onto a struct object:
+/// - struct_name_snake_case / _SCREAMING_SNAKE_CASE / _PascalCase / _camelCase / _kebab_case
+pub fn add_struct_name_expansions(struct_obj: &mut JsonMap<String, J>) {
+    let raw = struct_obj.get("name").and_then(J::as_str).unwrap_or_default();
+    let snake = to_snake(raw);
+
+    struct_obj.insert("struct_name_snake_case".into(), J::String(snake.clone()));
+    struct_obj.insert("struct_name_SCREAMING_SNAKE_CASE".into(), J::String(snake_to_screaming(&snake)));
+    struct_obj.insert("struct_name_PascalCase".into(), J::String(snake_to_pascal(&snake)));
+    struct_obj.insert("struct_name_camelCase".into(), J::String(snake_to_camel(&snake)));
+    struct_obj.insert("struct_name_kebab_case".into(), J::String(snake_to_kebab(&snake)));
+}
+
+/// Build an array `fields_list` suitable for Mustache iteration:
+/// fields_list: [
+///   {
+///     "key_snake_case": "...",
+///     "key_SCREAMING_SNAKE_CASE": "...",
+///     "key_PascalCase": "...",
+///     "key_camelCase": "...",
+///     "key_kebab_case": "...",
+///     "full_snake": "struct_key",
+///     "full_kebab": "struct-key",
+///     "value": <original field value>
+///   }, ...
+/// ]
+pub fn add_fields_list(struct_obj: &mut JsonMap<String, J>) {
+    let struct_name = struct_obj.get("name").and_then(J::as_str).unwrap_or_default();
+    let struct_snake = to_snake(struct_name);
+
+    let fields_map = struct_obj
+        .get("fields")
+        .and_then(J::as_object)
+        .cloned()
+        .unwrap_or_default();
+
+    let mut rows: Vec<J> = Vec::with_capacity(fields_map.len());
+    for (raw_key, val) in fields_map {
+        let key_snake = to_snake(&raw_key);
+
+        let mut row = JsonMap::new();
+        row.insert("key_snake_case".into(), J::String(key_snake.clone()));
+        row.insert("key_SCREAMING_SNAKE_CASE".into(), J::String(snake_to_screaming(&key_snake)));
+        row.insert("key_PascalCase".into(), J::String(snake_to_pascal(&key_snake)));
+        row.insert("key_camelCase".into(), J::String(snake_to_camel(&key_snake)));
+        row.insert("key_kebab_case".into(), J::String(snake_to_kebab(&key_snake)));
+
+        row.insert("full_snake".into(), J::String(format!("{}_{}", struct_snake, key_snake)));
+        row.insert(
+            "full_kebab".into(),
+            J::String(format!("{}-{}", snake_to_kebab(&struct_snake), snake_to_kebab(&key_snake))),
+        );
+
+        row.insert("value".into(), val);
+        rows.push(J::Object(row));
+    }
+
+    struct_obj.insert("fields_list".into(), J::Array(rows));
 }
 
 // ---------------- internal helpers ----------------
@@ -69,7 +134,7 @@ fn detect_and_to_snake(s: &str) -> String {
     if looks_like_caps_mixed(s) {
         return caps_to_snake(s);
     }
-    // fallback: lower + replace non-alnum with underscores (already sanitized, so rare)
+    // fallback
     s.to_ascii_lowercase()
 }
 
@@ -98,7 +163,6 @@ fn is_kebab(s: &str) -> bool {
 }
 
 fn looks_like_caps_mixed(s: &str) -> bool {
-    // crude but effective: contains any uppercase character
     s.chars().any(|c| c.is_ascii_uppercase())
 }
 
@@ -119,12 +183,13 @@ fn caps_to_snake(s: &str) -> String {
 
         let is_upper = c.is_ascii_uppercase();
         let prev_is_lower_or_digit = prev.map(|p| p.is_ascii_lowercase() || p.is_ascii_digit()).unwrap_or(false);
+        let prev_is_upper = prev.map(|p| p.is_ascii_uppercase()).unwrap_or(false);
         let next_is_lower = next.map(|n| n.is_ascii_lowercase()).unwrap_or(false);
 
         // Insert underscore on:
         // 1) lower/digit → UPPER   (fooBar -> foo_bar)
         // 2) UPPER(…UPPER) → lower (HTTPServer -> http_server) before the lower
-        if (is_upper && prev_is_lower_or_digit) || (is_upper && next_is_lower && prev.map(|p| p.is_ascii_uppercase()).unwrap_or(false)) {
+        if (is_upper && prev_is_lower_or_digit) || (is_upper && next_is_lower && prev_is_upper) {
             if !out.ends_with('_') {
                 out.push('_');
             }
@@ -133,12 +198,10 @@ fn caps_to_snake(s: &str) -> String {
         out.push(c.to_ascii_lowercase());
     }
 
-    // collapse potential double underscores (paranoia)
     while out.contains("__") {
         out = out.replace("__", "_");
     }
 
-    // trim leading/trailing underscores
     out.trim_matches('_').to_string()
 }
 
