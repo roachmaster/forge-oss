@@ -1,0 +1,14 @@
+{
+  "header": {
+    "required": ["id", "type", "version"],
+    "fields": {
+      "id": { "type": "string" },
+      "type": { "type": "string" },
+      "version": { "type": "string" }
+    }
+  },
+  "payload": {
+    "required": [],
+    "fields": {}
+  }
+}

@@ -1,0 +1,122 @@
+// -----------------------------------------------------------------------------
+// Auto-generated builder for the `{{message_name}}` message.
+// Emitted by `create_forge_msg_builder!("<name>")`.
+// Rationale: header_/payload_ prefixes prevent method-name collisions when keys
+// share the same name across header and payload.
+// -----------------------------------------------------------------------------
+
+use std::collections::HashMap;
+use once_cell::sync::Lazy;
+use serde_json::Value;
+
+// -----------------------------------------------------------------------------
+// Schema embedding (path comes from the build-time env var REPO_ROOT).
+// -----------------------------------------------------------------------------
+static {{{message_name_SCREAMING_SNAKE_CASE}}}_SCHEMA_JSON: &str =
+    include_str!(concat!(env!("REPO_ROOT"), "/resources/schemas/{{message_name_snake_case}}.json"));
+
+static {{{message_name_SCREAMING_SNAKE_CASE}}}_SCHEMA: Lazy<Value> = Lazy::new(|| {
+    serde_json::from_str({{{message_name_SCREAMING_SNAKE_CASE}}}_SCHEMA_JSON).expect("valid embedded schema JSON")
+});
+
+// -----------------------------------------------------------------------------
+// Message type
+// -----------------------------------------------------------------------------
+#[derive(Debug, Clone)]
+pub struct {{message_name}}Message {
+    header: HashMap<String, Value>,
+    payload: HashMap<String, Value>,
+}
+
+impl {{message_name}}Message {
+    #[inline]
+    pub fn header(&self) -> &HashMap<String, Value> { &self.header }
+
+    #[inline]
+    pub fn payload(&self) -> &HashMap<String, Value> { &self.payload }
+}
+
+impl crate::msg::forge::Message for {{message_name}}Message {
+    #[inline]
+    fn name(&self) -> &'static str { "{{message_name}}" }
+
+    #[inline]
+    fn header(&self) -> &HashMap<String, Value> { &self.header }
+
+    #[inline]
+    fn payload(&self) -> &HashMap<String, Value> { &self.payload }
+
+    #[inline]
+    fn validate(&self, schema: &Value) -> bool {
+        crate::msg::forge::SchemaValidator::validate(self.name(), self.header(), self.payload(), schema)
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Message builder
+// -----------------------------------------------------------------------------
+#[derive(Debug, Default)]
+pub struct {{message_name}}MessageBuilder {
+    header: HashMap<String, Value>,
+    payload: HashMap<String, Value>,
+}
+
+impl {{message_name}}MessageBuilder {
+    #[inline]
+    pub fn new() -> Self { Self::default() }
+
+    // -----------------------
+    // Header setters (prefixed to avoid collisions)
+    // -----------------------
+{{#header.fields}}
+    #[inline]
+    pub fn header_{{name_snake_case}}(mut self, v: {{{setter_param_type}}}) -> Self {
+{{#is_string}}        self.header.insert("{{name}}".into(), Value::String(v.into()));{{/is_string}}{{#is_boolean}}        self.header.insert("{{name}}".into(), Value::Bool(v));{{/is_boolean}}{{#is_integer}}        self.header.insert("{{name}}".into(), Value::Number((v as i64).into()));{{/is_integer}}{{#is_number}}        { let num = serde_json::Number::from_f64(v).expect("finite"); self.header.insert("{{name}}".into(), Value::Number(num)); }{{/is_number}}
+        self
+    }
+{{/header.fields}}
+
+    // ------------------------
+    // Payload setters (prefixed to avoid collisions)
+    // ------------------------
+{{#payload.fields}}
+    #[inline]
+    pub fn payload_{{name_snake_case}}(mut self, v: {{{setter_param_type}}}) -> Self {
+{{#is_string}}        self.payload.insert("{{name}}".into(), Value::String(v.into()));{{/is_string}}{{#is_boolean}}        self.payload.insert("{{name}}".into(), Value::Bool(v));{{/is_boolean}}{{#is_integer}}        self.payload.insert("{{name}}".into(), Value::Number((v as i64).into()));{{/is_integer}}{{#is_number}}        { let num = serde_json::Number::from_f64(v).expect("finite"); self.payload.insert("{{name}}".into(), Value::Number(num)); }{{/is_number}}
+        self
+    }
+{{/payload.fields}}
+
+    // ------------------------
+    // Escape hatches
+    // ------------------------
+    #[inline]
+    pub fn header_raw<K: Into<String>>(mut self, k: K, v: Value) -> Self { self.header.insert(k.into(), v); self }
+
+    #[inline]
+    pub fn payload_raw<K: Into<String>>(mut self, k: K, v: Value) -> Self { self.payload.insert(k.into(), v); self }
+
+    // ------------------------
+    // Finalize + validate
+    // ------------------------
+    #[inline]
+    pub fn build(self) -> Result<{{message_name}}Message, String> {
+        let msg = {{message_name}}Message { header: self.header, payload: self.payload };
+        if !msg.validate(&{{{message_name_SCREAMING_SNAKE_CASE}}}_SCHEMA) { return Err("{{message_name}}Message failed schema validation".into()); }
+        Ok(msg)
+    }
+}
+
+// -----------------------------------------------------------------------------
+// Example
+// -----------------------------------------------------------------------------
+//
+// let msg = {{message_name}}MessageBuilder::new()
+//     .header_id("abc123")
+//     .header_type("entry.create")
+//     .header_version("1.0")
+//     .build()
+//     .unwrap();
+//
+// assert_eq!(msg.name(), "{{message_name}}");
+// assert!(msg.validate(&{{{message_name_SCREAMING_SNAKE_CASE}}}_SCHEMA));

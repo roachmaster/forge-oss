@@ -1,0 +1,23 @@
+/* === Generated CSS Variables from Design Tokens === */
+
+:root {
+{{#payload.structs}}
+  /* --- {{name}} --- */
+  {{#fields_list}}
+  --{{../struct_name_kebab_case}}-{{key_kebab_case}}: {{value}};
+  {{/fields_list}}
+{{/payload.structs}}
+}
+
+/* Expanded name forms for reference (PascalCase, snake_case, etc.) */
+{{#payload.structs}}
+/* {{name}} expansions */
+{{#fields_list}}
+/* {{../struct_name_kebab_case}}-{{key_kebab_case}}
+   PascalCase: {{key_PascalCase}}
+   snake_case: {{key_snake_case}}
+   camelCase:  {{key_camelCase}}
+   SCREAMING:  {{key_SCREAMING_SNAKE_CASE}}
+   kebab-case: {{key_kebab_case}} */
+{{/fields_list}}
+{{/payload.structs}}
