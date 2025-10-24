@@ -1,0 +1,36 @@
+header:
+  # ---------------------------------------------------------------------------
+  # Core Metadata
+  # ---------------------------------------------------------------------------
+  kind: ui_component
+  description: Forge UI Component
+  name: button
+
+  # ---------------------------------------------------------------------------
+  # Provenance (used for generation banners)
+  # ---------------------------------------------------------------------------
+  file: templates/ui_component/context.yaml
+  template: templates/ui_component/mod.mustache
+
+payload:
+  # ---------------------------------------------------------------------------
+  # Module Declarations (submodules generated in mod.rs)
+  # ---------------------------------------------------------------------------
+  mods:
+    - model
+    - style
+    - render
+    - id
+
+  # ---------------------------------------------------------------------------
+  # Exported Paths (publicly exposed symbols)
+  # ---------------------------------------------------------------------------
+  exports:
+    - mod: model
+      path: Button
+      name: Button
+      doc: "Primary Button component definition"
+    - mod: style
+      path: ButtonStyle
+      name: ButtonStyle
+      doc: "Visual and thematic styling for Button"
