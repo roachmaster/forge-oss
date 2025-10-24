@@ -31,6 +31,7 @@ pub fn condition_schema(raw: &Value) -> Value {
 }
 
 /// YAML path: generic—only return `{ header: {...}, payload: {...} }`.
+#[cfg_attr(feature = "trace", tracing::instrument(level = "debug", skip_all))]
 pub fn condition_yaml(raw: &Value) -> Value {
     condition_generic(raw)
 }

@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 pub mod value;
 pub mod condition;
-mod values_template_expansion;
+pub mod values_template_expansion;
 pub mod codegen_ctx;
 pub(crate) mod helpers;
 pub mod field_codegen;

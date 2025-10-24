@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-# Load FORGE_ROOT
+# Resolve and source project_root.sh
 . "$(dirname "$0")/project_root.sh"
 
 export RUST_LOG="${RUST_LOG:-info}"

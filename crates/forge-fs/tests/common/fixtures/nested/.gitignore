@@ -1,3 +1,0 @@
-# ignore all .log files and the ignored/ dir
-*.log
-ignored/
