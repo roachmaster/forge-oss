@@ -1,1 +1,1 @@
-export FORGE_CURRENT_CRATE="forge-template"
+export FORGE_CURRENT_CRATE="forge-ide"

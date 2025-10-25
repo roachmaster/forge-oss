@@ -1,8 +1,9 @@
 [workspace]
 members = [
     "crates/forge-template",
-    "crates/forge-proc"
-, "crates/forge-web-ui-components"]
+    "crates/forge-proc", 
+    "crates/forge-web-ui-components",
+    "crates/forge-ide"]
 resolver = "2"
 
 [workspace.package]

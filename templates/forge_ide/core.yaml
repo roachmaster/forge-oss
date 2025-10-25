@@ -1,0 +1,114 @@
+# ============================================================================
+# Forge IDE Crate Context Manifest
+# ============================================================================
+header:
+  description: "Forge IDE crate layout manifest"
+  version: 1.0
+  kind: forge_ide_crate
+  namespace: forge_ide
+
+# ----------------------------------------------------------------------------
+payload:
+  crate: forge-ide
+
+  mods:
+    - name: core
+      desc: "Core entrypoint for the Forge IDE backend"
+      active: true
+
+      modules:
+        - name: schema
+          pub: true
+          use: true
+          desc: "Data types: ForgeRequest / ForgeResponse"
+          ast:
+            kind: schema_file
+            version: 1.0
+            namespace: forge_ide
+            items:
+              - name: ForgeRequest
+                desc: "Canonical request definition for Forge IDE backends"
+                is_enum: true
+                is_struct: false
+                is_json_struct: true
+                has_custom_methods: false
+                variants:
+                  - name: RenderManifest
+                    desc: "Render a manifest file"
+                  - name: BuildCrate
+                    desc: "Build a crate (debug or release)"
+                  - name: GetEnv
+                    desc: "Return environment info"
+                  - name: Custom
+                    desc: "Custom user command"
+
+              - name: ForgeResponse
+                desc: "Canonical response envelope"
+                is_enum: false
+                is_struct: true
+                is_json_struct: true
+                has_custom_methods: true
+                fields:
+                  - name: status
+                    type: ForgeStatus
+                  - name: message
+                    type: String
+                  - name: data
+                    type: Option<serde_json::Value>
+
+                impls:
+                  - name: ok
+                    is_self_body: true
+                    args:
+                      - name: msg
+                        type: "impl Into<String>"
+                    body:
+                      fields:
+                        - name: status
+                          value: "ForgeStatus::Ok"
+                        - name: message
+                          value: "msg.into()"
+                        - name: data
+                          value: "None"
+
+                  - name: error
+                    is_self_body: true
+                    args:
+                      - name: msg
+                        type: "impl Into<String>"
+                    body:
+                      fields:
+                        - name: status
+                          value: "ForgeStatus::Error"
+                        - name: message
+                          value: "msg.into()"
+                        - name: data
+                          value: "None"
+
+                  - name: with_data
+                    is_self_body: true
+                    generics: "<T: Serialize>"
+                    args:
+                      - name: msg
+                        type: "impl Into<String>"
+                      - name: data
+                        type: "&T"
+                    body:
+                      fields:
+                        - name: status
+                          value: "ForgeStatus::Ok"
+                        - name: message
+                          value: "msg.into()"
+                        - name: data
+                          value: "Some(serde_json::to_value(data).unwrap_or_default())"
+
+              - name: ForgeStatus
+                desc: "Result status codes"
+                is_enum: true
+                is_struct: false
+                is_json_struct: false
+                has_custom_methods: false
+                variants:
+                  - name: Ok
+                  - name: Error
+                  - name: Skipped
