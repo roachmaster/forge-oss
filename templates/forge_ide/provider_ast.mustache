@@ -1,0 +1,26 @@
+{{#payload}}{{#mods}}{{#modules}}{{#isProvider}}{{#ast}}{{#imports}}{{#type}}{{#is_crate}}// ============================================================================
+// AUTO-GENERATED FILE — DO NOT EDIT MANUALLY
+// ============================================================================
+use crate::{{{module}}}::{{{value}}};{{/is_crate}}{{#is_std}}use std::{{{module}}}::{{{value}}};{{/is_std}}{{/type}}{{^type}}{{{value}}}{{/type}}{{/imports}}
+{{#items}}/// ---------------------------------------------------------------------------
+/// {{name}} — {{desc}}
+/// ---------------------------------------------------------------------------
+{{#is_struct}}#[derive(Debug, Clone)]
+pub struct {{name}} {
+  {{#fields}}pub {{name}}: {{{type}}}{{#hasNext}},{{/hasNext}}{{/fields}}
+}{{/is_struct}}
+{{#has_custom_methods}}impl {{name}} {
+{{#impls}}{{#async}}    pub async fn {{{name}}}({{/async}}{{^async}}    pub fn {{{name}}}({{/async}}{{#args}}{{{name}}}: {{{type}}}{{#hasNext}},{{/hasNext}}{{/args}}) -> {{{returns}}} {
+{{#returns_self_body}}        Self {
+            {{#body.fields}}{{{name}}}: {{{value}}}{{#hasNext}},{{/hasNext}}{{/body.fields}}
+        }
+{{/returns_self_body}}{{^returns_self_body}}{{#body.prelude}}        use {{{path}}};{{/body.prelude}}{{#body.statements}}        {{{value}}}{{/body.statements}}
+{{#body.match}}        match {{{variable}}} {
+{{#arms}}            {{{pattern}}} => self.providers[&ForgeCommandKind::{{variant}}].execute(request).await,
+{{/arms}}
+        }
+{{/body.match}}        {{#body.chain}}{{{variable}}}{{#hasNext}}{{#call}}
+            .{{{call}}}{{/call}}{{/hasNext}}{{^hasNext}}{{#call}}
+            .{{{call}}}{{/call}}{{/hasNext}}{{/body.chain}}{{/returns_self_body}}
+    }
+{{/impls}}}{{/has_custom_methods}}{{/items}}{{/ast}}{{/isProvider}}{{/modules}}{{/mods}}{{/payload}}

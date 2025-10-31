@@ -17,10 +17,17 @@ payload:
       active: true
 
       modules:
+        # --------------------------------------------------------------------
+        # SCHEMA MODULE
+        # --------------------------------------------------------------------
         - name: schema
           pub: true
           use: true
           desc: "Data types: ForgeRequest / ForgeResponse"
+          isSchema: true
+          isCommand: false
+          isProvider: false
+          isRouter: false
           ast:
             kind: schema_file
             version: 1.0
@@ -55,7 +62,6 @@ payload:
                     type: String
                   - name: data
                     type: Option<serde_json::Value>
-
                 impls:
                   - name: ok
                     is_self_body: true
@@ -70,7 +76,6 @@ payload:
                           value: "msg.into()"
                         - name: data
                           value: "None"
-
                   - name: error
                     is_self_body: true
                     args:
@@ -84,7 +89,6 @@ payload:
                           value: "msg.into()"
                         - name: data
                           value: "None"
-
                   - name: with_data
                     is_self_body: true
                     generics: "<T: Serialize>"
@@ -112,3 +116,237 @@ payload:
                   - name: Ok
                   - name: Error
                   - name: Skipped
+
+        # --------------------------------------------------------------------
+        # COMMAND MODULE
+        # --------------------------------------------------------------------
+        - name: command
+          pub: true
+          use: true
+          desc: "Defines the ForgeIdeCommand trait and dispatch enums"
+          isSchema: false
+          isCommand: true
+          isProvider: false
+          isRouter: false
+          ast:
+            kind: trait_file
+            version: 1.0
+            namespace: forge_ide
+            imports:
+              - "use crate::schema::{ForgeRequest, ForgeResponse};"
+              - "use async_trait::async_trait;"
+            items:
+              - name: ForgeIdeCommand
+                desc: "Common interface for all Forge IDE commands"
+                is_enum: false
+                is_struct: false
+                is_trait: true
+                methods:
+                  - name: execute
+                    async: true
+                    args:
+                      - name: self
+                        type: "&self"
+                      - name: request
+                        type: "&ForgeRequest"
+                    returns: "ForgeResponse"
+                    desc: "Executes the command given an incoming ForgeRequest."
+                  - name: name
+                    async: false
+                    args:
+                      - name: self
+                        type: "&self"
+                    returns: "&'static str"
+                    desc: "Optional: name of the command for logging/debugging."
+                    default_body: |
+                      std::any::type_name::<Self>()
+              - name: ForgeCommandKind
+                desc: "Helper enum for generic dispatch (optional in later steps)"
+                is_enum: true
+                is_struct: false
+                is_json_struct: false
+                has_custom_methods: false
+                variants:
+                  - name: Build
+                  - name: Render
+                  - name: Env
+                  - name: Custom
+
+        # --------------------------------------------------------------------
+        # PROVIDER MODULE
+        # --------------------------------------------------------------------
+        - name: provider
+          pub: true
+          use: true
+          desc: "Forge provider registry — manages and dispatches ForgeIdeCommand instances"
+          isSchema: false
+          isCommand: false
+          isProvider: true
+          isRouter: false
+          ast:
+            kind: provider_file
+            version: 1.0
+            namespace: forge_ide
+            imports:
+              - type: "crate"
+                module: "schema"
+                value: "ForgeRequest, ForgeResponse"
+              - type: "crate"
+                module: "command"
+                value: "ForgeIdeCommand, ForgeCommandKind"
+              - type: "std"
+                module: "collections"
+                value: "HashMap"
+              - type: "std"
+                module: "sync"
+                value: "Arc"
+
+            items:
+              - name: ForgeProviderRegistry
+                desc: "Central registry for all Forge IDE command providers"
+                is_enum: false
+                is_struct: true
+                is_trait: false
+                has_custom_methods: true
+
+                fields:
+                  - name: providers
+                    type: "HashMap<ForgeCommandKind, Arc<dyn ForgeIdeCommand>>"
+
+                impls:
+                  - name: new
+                    is_self_body: false
+                    returns_self_body: true
+                    args: []
+                    returns: "Self"
+                    body:
+                      fields:
+                        - name: providers
+                          value: "HashMap::new()"
+
+                  - name: register
+                    is_self_body: false
+                    async: false
+                    args:
+                      - name: self
+                        type: "&mut self"
+                      - name: kind
+                        type: "ForgeCommandKind"
+                      - name: command
+                        type: "Arc<dyn ForgeIdeCommand>"
+                    returns: "()"
+                    body:
+                      statements:
+                        - "self.providers.insert(kind, command);"
+
+                  - name: dispatch
+                    is_self_body: false
+                    async: true
+                    args:
+                      - name: self
+                        type: "&self"
+                      - name: request
+                        type: "&ForgeRequest"
+                    returns: "ForgeResponse"
+                    body:
+                      prelude:
+                        - type: "use"
+                          path: "ForgeRequest::*"
+                      match:
+                        variable: "request"
+                        arms:
+                          - pattern: "RenderManifest"
+                            variant: "Render"
+                          - pattern: "BuildCrate"
+                            variant: "Build"
+                          - pattern: "GetEnv"
+                            variant: "Env"
+                          - pattern: "Custom"
+                            variant: "Custom"
+
+                  - name: list_registered
+                    is_self_body: false
+                    async: false
+                    args:
+                      - name: self
+                        type: "&self"
+                    returns: "Vec<&'static str>"
+                    body:
+                      chain:
+                        - variable: "self.providers"
+                        - call: "values()"
+                        - call: "map(|c| c.name())"
+                        - call: "collect::<Vec<_>>()"
+        # --------------------------------------------------------------------
+        # ROUTER MODULE
+        # --------------------------------------------------------------------
+        - name: router
+          pub: true
+          use: true
+          desc: "ForgeRouter — entrypoint for dispatching requests via ForgeProviderRegistry"
+          isSchema: false
+          isCommand: false
+          isProvider: false
+          isRouter: true
+          ast:
+            kind: router_file
+            version: 1.0
+            namespace: forge_ide
+            imports:
+              - type: "crate"
+                module: "schema"
+                value: "ForgeRequest, ForgeResponse"
+              - type: "crate"
+                module: "provider"
+                value: "ForgeProviderRegistry"
+              - type: "std"
+                module: "sync"
+                value: "Arc"
+
+            items:
+              - name: ForgeRouter
+                desc: "Central router — handles incoming requests via the provider registry"
+                is_struct: true
+                is_enum: false
+                is_trait: false
+                has_custom_methods: true
+                fields:
+                  - name: registry
+                    type: "Arc<ForgeProviderRegistry>"
+
+                impls:
+                  - name: new
+                    is_self_body: false
+                    returns_self_body: true
+                    args:
+                      - name: registry
+                        type: "Arc<ForgeProviderRegistry>"
+                    returns: "Self"
+                    body:
+                      fields:
+                        - name: registry
+                          value: "registry"
+
+                  - name: handle
+                    async: true
+                    is_self_body: false
+                    args:
+                      - name: self
+                        type: "&self"
+                      - name: request
+                        type: "&ForgeRequest"
+                    returns: "ForgeResponse"
+                    body:
+                      statements:
+                        - "self.registry.dispatch(request).await"
+
+                  - name: info
+                    async: false
+                    is_self_body: false
+                    args:
+                      - name: self
+                        type: "&self"
+                    returns: "Vec<&'static str>"
+                    body:
+                      statements:
+                        - "self.registry.list_registered()"

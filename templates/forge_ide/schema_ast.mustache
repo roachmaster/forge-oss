@@ -2,11 +2,12 @@
 // AUTO-GENERATED FILE — DO NOT EDIT MANUALLY
 // ============================================================================
 
-use serde::{Serialize, Deserialize};
 
 {{#payload}}
 {{#mods}}
 {{#modules}}
+{{#isSchema}}
+use serde::{Serialize, Deserialize};
 {{#ast}}
 {{#items}}
 
@@ -70,7 +71,8 @@ impl {{name}} {
             {{/body.fields}}
         }{{/is_self_body}}
         {{^is_self_body}}{{{body}}}{{/is_self_body}}
-    }{{/generics}}
+    }
+    {{/generics}}
     {{^generics}}
     pub fn {{{name}}}(
         {{#args}}
@@ -84,12 +86,15 @@ impl {{name}} {
             {{/body.fields}}
         }{{/is_self_body}}
         {{^is_self_body}}{{{body}}}{{/is_self_body}}
-    }{{/generics}}{{/impls}}
+    }
+    {{/generics}}
+{{/impls}}
 }
 {{/has_custom_methods}}
 
 {{/items}}
 {{/ast}}
+{{/isSchema}}
 {{/modules}}
 {{/mods}}
 {{/payload}}
