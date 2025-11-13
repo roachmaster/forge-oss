@@ -1,0 +1,59 @@
+header:
+  file: templates/forge_ide/generated/command.yaml
+  template: templates/forge_ide/command.mustache
+  type: command_module
+payload:
+  # --------------------------------------------------------------------
+  # COMMAND MODULE
+  # --------------------------------------------------------------------
+  name: command
+  pub: true
+  use: true
+  desc: Defines the ForgeIdeCommand trait and dispatch enums
+  isSchema: false
+  isCommand: true
+  isProvider: false
+  isRouter: false
+  ast:
+    kind: trait_file
+    version: 1.0
+    namespace: forge_ide
+    imports:
+      - use crate::schema::{ForgeRequest, ForgeResponse};
+      - use async_trait::async_trait;
+    items:
+      - name: ForgeIdeCommand
+        desc: Common interface for all Forge IDE commands
+        is_enum: false
+        is_struct: false
+        is_trait: true
+        methods:
+          - name: execute
+            async: true
+            args:
+              - name: self
+                type: '&self'
+              - name: request
+                type: '&ForgeRequest'
+            returns: ForgeResponse
+            desc: Executes the command given an incoming ForgeRequest.
+          - name: name
+            async: false
+            args:
+              - name: self
+                type: '&self'
+            returns: '&''static str'
+            desc: 'Optional: name of the command for logging/debugging.'
+            default_body: |
+              std::any::type_name::<Self>()
+      - name: ForgeCommandKind
+        desc: Helper enum for generic dispatch (optional in later steps)
+        is_enum: true
+        is_struct: false
+        is_json_struct: false
+        has_custom_methods: false
+        variants:
+          - name: Build
+          - name: Render
+          - name: Env
+          - name: Custom

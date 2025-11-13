@@ -1,0 +1,59 @@
+// ============================================================================
+// ⚙️  Auto-generated Schema Module
+// Description: {{payload.desc}}
+// File: {{payload.file}}
+// ============================================================================
+
+use serde::{Serialize, Deserialize};
+
+// ------------------------------------------------------------------------
+// ENUMS & STRUCTS
+// ------------------------------------------------------------------------
+
+{{#payload.ast.items}}
+/// {{desc}}
+
+{{#is_enum}}
+#[derive({{#derives}}{{value}}{{#hasNext}}, {{/hasNext}}{{/derives}})]
+pub enum {{name_PascalCase}} {
+    {{#variants}}
+    /// {{desc}}
+    {{name_PascalCase}}{{#hasNext}},{{/hasNext}}
+    {{/variants}}
+}
+
+{{/is_enum}}
+
+{{#is_struct}}
+#[derive({{#derives}}{{value}}{{#hasNext}}, {{/hasNext}}{{/derives}})]
+{{#is_json_struct}}#[serde(rename_all = "camelCase")]{{/is_json_struct}}
+pub struct {{name_PascalCase}} {
+    {{#fields}}
+    /// Field: {{name_snake_case}}
+    pub {{name_snake_case}}: {{{type}}}{{#hasNext}},{{/hasNext}}
+    {{/fields}}
+}
+
+{{#has_custom_methods}}
+impl {{name_PascalCase}} {
+    {{#impls}}
+    /// {{desc}}
+    pub fn {{name_snake_case}}{{#generics}}{{{generics}}}{{/generics}}(
+        {{#args}}
+        {{name_snake_case}}: {{{type}}}{{#hasNext}},{{/hasNext}}
+        {{/args}}
+    ) -> Self {
+        Self {
+            {{#body.fields}}
+            {{name_snake_case}}: {{{value}}}{{#hasNext}},{{/hasNext}}
+            {{/body.fields}}
+        }
+    }
+
+    {{/impls}}
+}
+{{/has_custom_methods}}
+
+{{/is_struct}}
+
+{{/payload.ast.items}}

@@ -1,0 +1,77 @@
+// ============================================================================
+// ⚙️  Auto-generated Provider Module
+// Description : {{payload.desc}}
+// Source      : {{header.file}}
+// Template    : {{header.template}}
+// ============================================================================
+
+use async_trait::async_trait;
+{{#payload.ast.imports}}
+use {{{type}}}::{{{module}}}::{ {{{value}}} };
+{{/payload.ast.imports}}
+
+// ------------------------------------------------------------------------
+// STRUCT & IMPLEMENTATION
+// ------------------------------------------------------------------------
+{{#payload.ast.items}}
+/// {{desc}}
+#[derive(Debug, Default)]
+pub struct {{name}} {
+    {{#fields}}
+    pub {{name_snake_case}}: {{{type}}},
+    {{/fields}}
+}
+
+impl {{name}} {
+    {{#impls}}
+    // ----------------------------------------------------------------
+    // METHOD: {{name}}
+    // ----------------------------------------------------------------
+    {{#async}}
+    pub async fn {{name_snake_case}}({{#args}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/args}}) -> {{{returns}}} {
+    {{/async}}
+    {{^async}}
+    pub fn {{name_snake_case}}({{#args}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/args}}) -> {{{returns}}} {
+    {{/async}}
+
+        {{#body.fields}}
+        Self { {{name_snake_case}}: {{{value}}}, }
+        {{/body.fields}}
+
+        {{#body.statements}}
+        {{{value}}}
+        {{/body.statements}}
+
+        {{#body.chain}}
+        {{#variable}}{{{variable}}}{{/variable}}{{#call}}.{{{call}}}{{/call}}
+        {{/body.chain}}
+
+        {{#body.match}}
+        match {{{variable}}} {
+            {{#arms}}
+            {{{pattern}}} => self.dispatch_{{variant_snake_case}}({{{variable}}}).await,
+            {{/arms}}
+        }
+        {{/body.match}}
+    }
+
+    {{/impls}}
+}
+
+// ------------------------------------------------------------------------
+// DISPATCH HANDLERS (auto-generated stubs)
+// ------------------------------------------------------------------------
+impl {{name}} {
+    {{#impls}}
+    {{#body.match.arms}}
+    pub async fn dispatch_{{variant_snake_case}}(
+        &self,
+        _request: &ForgeRequest
+    ) -> ForgeResponse {
+        todo!("Handle {{variant}} request variant");
+    }
+
+    {{/body.match.arms}}
+    {{/impls}}
+}
+{{/payload.ast.items}}

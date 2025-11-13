@@ -1,0 +1,41 @@
+// ============================================================================
+// ⚙️  Auto-generated Command Module
+// Description: {{payload.desc}}
+// File: {{payload.file}}
+// ============================================================================
+
+{{#payload.ast.imports}}
+{{{value}}}
+{{/payload.ast.imports}}
+
+// ------------------------------------------------------------------------
+// TRAIT & ENUM DEFINITIONS
+// ------------------------------------------------------------------------
+
+{{#payload.ast.items}}
+/// {{desc}}
+
+{{#is_trait}}
+use std::sync::Arc;
+
+#[async_trait]
+pub trait {{name_PascalCase}}: Send + Sync {
+{{#methods}}
+    /// {{desc}}
+    {{#async}}async {{/async}}fn {{name_snake_case}}({{#args}}{{#is_self_arg}}&self{{#hasNext}}, {{/hasNext}}{{/is_self_arg}}{{^is_self_arg}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/is_self_arg}}{{/args}}) -> {{{returns}}}{{^default_body}};{{/default_body}}{{#default_body}} {
+        {{{default_body}}}
+    }{{/default_body}}
+{{/methods}}
+}
+{{/is_trait}}
+
+{{#is_enum}}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum {{name_PascalCase}} {
+    {{#variants}}
+    {{name_PascalCase}}{{#hasNext}}, {{/hasNext}}
+    {{/variants}}
+}
+{{/is_enum}}
+
+{{/payload.ast.items}}

@@ -1,0 +1,52 @@
+// ============================================================================
+// ⚙️  Auto-generated Router Module
+// Description : {{payload.desc}}
+// Source      : {{header.file}}
+// Template    : {{header.template}}
+// ============================================================================
+
+use async_trait::async_trait;
+{{#payload.ast.imports}}
+use {{{type}}}::{{{module}}}::{ {{{value}}} };
+{{/payload.ast.imports}}
+
+// ------------------------------------------------------------------------
+// STRUCT & IMPLEMENTATION
+// ------------------------------------------------------------------------
+{{#payload.ast.items}}
+/// {{desc}}
+#[derive(Debug)]
+pub struct {{name}} {
+    {{#fields}}
+    pub {{name_snake_case}}: {{{type}}},
+    {{/fields}}
+}
+
+impl {{name}} {
+    {{#impls}}
+    // ----------------------------------------------------------------
+    // METHOD: {{name}}
+    // ----------------------------------------------------------------
+    {{#async}}
+    pub async fn {{name_snake_case}}(
+        {{#args}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/args}}
+    ) -> {{{returns}}} {
+    {{/async}}
+    {{^async}}
+    pub fn {{name_snake_case}}(
+        {{#args}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/args}}
+    ) -> {{{returns}}} {
+    {{/async}}
+
+        {{#body.fields}}
+        Self { {{name_snake_case}}: {{{value}}}, }
+        {{/body.fields}}
+
+        {{#body.statements}}
+        {{{value}}}
+        {{/body.statements}}
+    }
+
+    {{/impls}}
+}
+{{/payload.ast.items}}

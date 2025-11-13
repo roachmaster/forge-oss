@@ -1,0 +1,127 @@
+header:
+  file: templates/forge_ide/modules/schema.yaml
+  template: templates/forge_ide/schema.mustache
+  type: schema_module
+
+payload:
+  # --------------------------------------------------------------------
+  # SCHEMA MODULE
+  # --------------------------------------------------------------------
+  name: schema
+  pub: true
+  use: true
+  desc: 'Data types: ForgeRequest / ForgeResponse'
+  isSchema: true
+  isCommand: false
+  isProvider: false
+  isRouter: false
+  ast:
+    kind: schema_file
+    version: 1.0
+    namespace: forge_ide
+
+    items:
+      # --------------------------------------------------------------
+      # ForgeRequest Enum
+      # --------------------------------------------------------------
+      - name: ForgeRequest
+        desc: Canonical request definition for Forge IDE backends
+        is_enum: true
+        is_struct: false
+        is_json_struct: true
+        has_custom_methods: false
+        derives: [Serialize, Deserialize, Debug, Clone, PartialEq, Eq]
+        variants:
+          - name: RenderManifest
+            desc: Render a manifest file
+          - name: BuildCrate
+            desc: Build a crate (debug or release)
+          - name: GetEnv
+            desc: Return environment info
+          - name: Custom
+            desc: Custom user command
+
+      # --------------------------------------------------------------
+      # ForgeResponse Struct
+      # --------------------------------------------------------------
+      - name: ForgeResponse
+        desc: Canonical response envelope
+        is_enum: false
+        is_struct: true
+        is_json_struct: true
+        has_custom_methods: true
+        derives: [Serialize, Deserialize, Debug, Clone]
+        fields:
+          - name: status
+            type: ForgeStatus
+          - name: message
+            type: String
+          - name: data
+            type: Option<serde_json::Value>
+
+        impls:
+          - name: ok
+            desc: Construct a successful response without data
+            is_self_body: true
+            args:
+              - name: msg
+                type: impl Into<String>
+            body:
+              fields:
+                - name: status
+                  value: ForgeStatus::Ok
+                - name: message
+                  value: msg.into()
+                - name: data
+                  value: None
+
+          - name: error
+            desc: Construct an error response without data
+            is_self_body: true
+            args:
+              - name: msg
+                type: impl Into<String>
+            body:
+              fields:
+                - name: status
+                  value: ForgeStatus::Error
+                - name: message
+                  value: msg.into()
+                - name: data
+                  value: None
+
+          - name: with_data
+            desc: Construct a successful response with attached data
+            is_self_body: true
+            generics: '<T: Serialize>'
+            args:
+              - name: msg
+                type: impl Into<String>
+              - name: data
+                type: '&T'
+            body:
+              fields:
+                - name: status
+                  value: ForgeStatus::Ok
+                - name: message
+                  value: msg.into()
+                - name: data
+                  value: Some(serde_json::to_value(data).unwrap_or_default())
+
+      # --------------------------------------------------------------
+      # ForgeStatus Enum
+      # --------------------------------------------------------------
+      - name: ForgeStatus
+        desc: Result status codes for ForgeResponse
+        is_enum: true
+        is_struct: false
+        is_json_struct: false
+        has_custom_methods: false
+        derives: [Serialize, Deserialize, Debug, Clone, PartialEq, Eq]
+        variants:
+          - name: Ok
+            desc: Operation succeeded
+          - name: Error
+            desc: Operation failed
+          - name: Skipped
+            desc: Operation skipped
