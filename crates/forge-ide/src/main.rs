@@ -1,95 +1,90 @@
-use std::{fs, path::PathBuf, process::Command};
-use clap::Parser;
-use colored::*;
-use anyhow::{Result, anyhow};
-use serde::Deserialize;
+// ============================================================================
+// ⚙️  Forge IDE - Main Entry Point
+// Description:
+//   The executable entry for the Forge IDE generator and runtime modules.
+//   This CLI allows you to trigger module generation, rendering, or
+//   runtime operations for schema, command, provider, and router modules.
+// ============================================================================
 
-#[derive(Parser, Debug)]
-#[command(author, version, about = "Forge IDE Template Orchestrator")]
-struct Args {
-    /// YAML context file (manifest or struct)
-    #[arg(short, long)]
-    context: PathBuf,
+mod schema;
+mod command;
+mod provider;
+mod router;
 
-    /// Mustache template path
-    #[arg(short, long)]
-    template: PathBuf,
+use std::env;
+use std::process::exit;
 
-    /// Output destination file
-    #[arg(short, long)]
-    output: PathBuf,
+fn print_help() {
+    println!(
+        r#"
+🔥 Forge IDE CLI
 
-    /// Overwrite output if exists
-    #[arg(long)]
-    force: bool,
+USAGE:
+    forge-ide <command>
+
+COMMANDS:
+    build       Rebuild all Forge IDE modules from templates
+    render      Render all modules into crates/forge-ide/src/
+    list        List available Forge IDE modules
+    help        Show this message
+
+EXAMPLES:
+    forge-ide build
+    forge-ide render
+"#
+    );
 }
 
-#[derive(Debug, Deserialize)]
-struct Manifest {
-    manifest: Option<serde_yaml::Value>,
-    crates: Option<serde_yaml::Value>,
-}
-
-fn ensure_path(path: &PathBuf) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
-    }
-    Ok(())
-}
-
-fn render_template(ctx: &PathBuf, template: &PathBuf, output: &PathBuf, force: bool) -> Result<()> {
-    if output.exists() && !force {
-        println!("{}", format!("SKIP: {}", output.display()).yellow());
-        return Ok(());
-    }
-
-    ensure_path(output)?;
-    let output_str = Command::new("forge-template")
-        .arg("render")
-        .arg(ctx)
-        .arg(template)
-        .output()?;
-
-    if !output_str.status.success() {
-        return Err(anyhow!("forge-template render failed"));
+fn main() {
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 2 {
+        print_help();
+        exit(0);
     }
 
-    fs::write(output, &output_str.stdout)?;
-    println!("{}", format!("OK: Rendered → {}", output.display()).green());
-    Ok(())
-}
+    match args[1].as_str() {
+        // -----------------------------------------------------------------
+        // 🏗️ Build: regenerate module YAMLs and render Rust files
+        // -----------------------------------------------------------------
+        "build" => {
+            println!("⚙️  [Forge IDE] Building all modules...");
+            let status = std::process::Command::new("./scripts/gen_forge_modules.zsh")
+                .status()
+                .expect("failed to execute generator script");
+            if !status.success() {
+                eprintln!("❌ Generation failed.");
+                exit(1);
+            }
+            println!("✅ All modules rebuilt successfully!");
+        }
 
-fn register_mod(output: &PathBuf) -> Result<()> {
-    let mod_name = output.file_stem().unwrap().to_str().unwrap();
-    let mod_rs = output.parent().unwrap().join("mod.rs");
-    let lib_rs = output.parent().unwrap().parent().unwrap().join("lib.rs");
+        // -----------------------------------------------------------------
+        // 🎨 Render: optional placeholder for later manual rendering logic
+        // -----------------------------------------------------------------
+        "render" => {
+            println!("🎨 Rendering Forge IDE templates...");
+            println!("(future extension: call forge-template APIs directly)");
+        }
 
-    let root = if mod_rs.exists() {
-        mod_rs
-    } else if lib_rs.exists() {
-        lib_rs
-    } else {
-        println!("{}", "WARN: No mod.rs or lib.rs found".yellow());
-        return Ok(());
-    };
+        // -----------------------------------------------------------------
+        // 📜 List modules
+        // -----------------------------------------------------------------
+        "list" => {
+            println!("📜 Available modules:");
+            println!(" - schema");
+            println!(" - command");
+            println!(" - provider");
+            println!(" - router");
+        }
 
-    let text = fs::read_to_string(&root)?;
-    if !text.contains(&format!("pub mod {}", mod_name)) {
-        fs::write(&root, format!("{}\npub mod {};\n", text, mod_name))?;
-        println!("{}", format!("ADD: Registered module {}", mod_name).green());
-    } else {
-        println!("{}", format!("INFO: Module already registered {}", mod_name).cyan());
+        // -----------------------------------------------------------------
+        // ❓ Help / Unknown
+        // -----------------------------------------------------------------
+        "help" => print_help(),
+        _ => {
+            eprintln!("❌ Unknown command: {}", args[1]);
+            print_help();
+            exit(1);
+        }
     }
-
-    Ok(())
-}
-
-fn main() -> Result<()> {
-    let args = Args::parse();
-
-    println!("{}", "[INIT] Forge IDE Template Orchestrator".bold());
-    render_template(&args.context, &args.template, &args.output, args.force)?;
-    register_mod(&args.output)?;
-    println!("{}", "[DONE] All templates processed".bold());
-    Ok(())
 }

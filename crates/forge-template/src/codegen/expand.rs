@@ -13,6 +13,73 @@ use crate::codegen::utils::{
 };
 use crate::codegen::flags::insert_type_flags;
 
+// -----------------------------------------------------------------------------
+// Expansion Policy — selective filtering for which keys may be expanded
+// -----------------------------------------------------------------------------
+
+/// Returns whether a given key should *not* be expanded at all.
+/// This includes semantic/documentation fields like desc/docs/comments.
+pub fn is_non_expanding_key(key: &str) -> bool {
+    matches!(
+        key,
+        "desc"
+            | "description"
+            | "docs"
+            | "comment"
+            | "note"
+            | "explain"
+            | "details"
+            | "summary"
+    )
+}
+
+/// Determines whether a key/value pair is safe to expand into naming variants.
+/// Context-aware: skips code fragments, Rust syntax, and doc fields.
+pub fn is_expandable_key(key: &str, value: &Value) -> bool {
+    // Never expand documentation-like fields
+    if is_non_expanding_key(key) {
+        return false;
+    }
+
+    // If it's a string, inspect its content
+    if let Some(s) = value.as_str() {
+        let looks_like_code = s.contains("::")
+            || s.contains("()")
+            || s.contains("<")
+            || s.contains(">")
+            || s.contains("=>")
+            || s.contains(";")
+            || s.contains("{")
+            || s.contains("}")
+            || s.contains("let ")
+            || s.contains("self.")
+            || s.contains("::new");
+
+        // Skip expansions for code fragments or type syntax
+        if looks_like_code {
+            return false;
+        }
+    }
+
+    // Expand only semantic identifier-style fields
+    matches!(
+        key,
+        "name"
+            | "type"
+            | "module"
+            | "pattern"
+            | "variant"
+            | "variable"
+            | "call"
+            | "path"
+            | "value" // only if value passes above check
+    )
+}
+
+// -----------------------------------------------------------------------------
+// Core Expansion Logic
+// -----------------------------------------------------------------------------
+
 /// Expand a single element of an array (handles strings, objects, and nested structures).
 fn expand_array_element(v: &Value) -> Value {
     match v {
@@ -24,14 +91,24 @@ fn expand_array_element(v: &Value) -> Value {
 
 /// Recursively expand all key/value pairs inside an object.
 /// - Adds naming variants via `ValuesTemplateExpansion`
+/// - Respects non-expanding keys
 /// - Recurses into nested objects/arrays
 /// - Appends type flags for Mustache logic
 pub fn expand_object_fields(obj: &Map<String, Value>) -> Map<String, Value> {
     let mut expanded = obj.clone();
 
     for (k, v) in obj {
+        if is_non_expanding_key(k) {
+            // Preserve literal doc fields
+            expanded.insert(k.clone(), v.clone());
+            continue;
+        }
+
         if let Some(s) = v.as_str() {
-            insert_expansions(&mut expanded, k, s);
+            // Only expand if allowed for this key/value pair
+            if is_expandable_key(k, v) {
+                insert_expansions(&mut expanded, k, s);
+            }
             insert_type_flags(&mut expanded, v);
         } else if v.is_array() || v.is_object() {
             expanded.insert(k.clone(), expand_value(v));
