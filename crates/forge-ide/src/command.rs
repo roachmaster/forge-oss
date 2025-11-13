@@ -13,8 +13,6 @@ use async_trait::async_trait;
 
 /// Common interface for all Forge IDE commands
 
-use std::sync::Arc;
-
 #[async_trait]
 pub trait ForgeIdeCommand: Send + Sync {
     /// Executes the command given an incoming ForgeRequest.
@@ -22,20 +20,15 @@ pub trait ForgeIdeCommand: Send + Sync {
     /// Optional: name of the command for logging/debugging.
     fn name(&self) -> &'static str {
         std::any::type_name::<Self>()
-
     }
 }
 
-
 /// Helper enum for generic dispatch (optional in later steps)
 
-
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ForgeCommandKind {
-    Build, 
-    Render, 
-    Env, 
-    Custom
+    Build,
+    Render,
+    Env,
+    Custom,
 }
-
-

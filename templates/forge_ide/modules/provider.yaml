@@ -45,18 +45,19 @@ payload:
           - name: new
             is_self_body: false
             returns_self_body: true
+            sig_args: ""
             args: []
             returns: Self
             body:
               fields:
                 - name: providers
                   value: HashMap::new()
+
           - name: register
             is_self_body: false
             async: false
+            sig_args: "&mut self, kind: ForgeCommandKind, command: Arc<dyn ForgeIdeCommand>"
             args:
-              - name: self
-                type: '&mut self'
               - name: kind
                 type: ForgeCommandKind
               - name: command
@@ -65,36 +66,33 @@ payload:
             body:
               statements:
                 - self.providers.insert(kind, command);
+
           - name: dispatch
             is_self_body: false
             async: true
+            sig_args: "&self, request: &ForgeRequest"
             args:
-              - name: self
-                type: '&self'
               - name: request
                 type: '&ForgeRequest'
             returns: ForgeResponse
             body:
-              prelude:
-                - type: use
-                  path: ForgeRequest::*
               match:
                 variable: request
                 arms:
-                  - pattern: RenderManifest
+                  - pattern: ForgeRequest::RenderManifest
                     variant: Render
-                  - pattern: BuildCrate
+                  - pattern: ForgeRequest::BuildCrate
                     variant: Build
-                  - pattern: GetEnv
+                  - pattern: ForgeRequest::GetEnv
                     variant: Env
-                  - pattern: Custom
+                  - pattern: ForgeRequest::Custom
                     variant: Custom
+
           - name: list_registered
             is_self_body: false
             async: false
-            args:
-              - name: self
-                type: '&self'
+            sig_args: "&self"
+            args: []
             returns: Vec<&'static str>
             body:
               chain:

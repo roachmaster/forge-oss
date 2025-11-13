@@ -42,6 +42,7 @@ payload:
           - name: new
             is_self_body: false
             returns_self_body: true
+            sig_args: "registry: Arc<ForgeProviderRegistry>"
             args:
               - name: registry
                 type: Arc<ForgeProviderRegistry>
@@ -50,24 +51,24 @@ payload:
               fields:
                 - name: registry
                   value: registry
+
           - name: handle
             async: true
             is_self_body: false
+            sig_args: "&self, request: &ForgeRequest"
             args:
-              - name: self
-                type: '&self'
               - name: request
                 type: '&ForgeRequest'
             returns: ForgeResponse
             body:
               statements:
                 - self.registry.dispatch(request).await
+
           - name: info
             async: false
             is_self_body: false
-            args:
-              - name: self
-                type: '&self'
+            sig_args: "&self"
+            args: []
             returns: Vec<&'static str>
             body:
               statements:

@@ -1,10 +1,6 @@
 #!/usr/bin/env zsh
 # =====================================================================
 # 🔥 Forge IDE Module Renderer (Direct YAML → Rust)
-# Description:
-#   Renders Rust source files directly from YAML modules under
-#   templates/forge_ide/modules/ using their matching Mustache templates.
-#   Outputs go to crates/forge-ide/src/.
 # =====================================================================
 
 set -e
@@ -20,7 +16,7 @@ YELLOW=$(tput setaf 3)
 RED=$(tput setaf 1)
 
 # ---------------------------------------------------------------------
-# 📂 Paths
+# 📂 Paths & Globals
 # ---------------------------------------------------------------------
 root_dir=$(dirname "$0")/..
 cd "$root_dir"
@@ -29,17 +25,31 @@ modules_dir="templates/forge_ide/modules"
 templates_dir="templates/forge_ide"
 rust_dir="crates/forge-ide/src"
 
-echo ""
-echo "${CYAN}${BOLD}⚙️  [Forge IDE Renderer]${RESET}"
-echo "Modules folder:   $modules_dir"
-echo "Templates folder: $templates_dir"
-echo "Rust output:      $rust_dir"
-echo ""
-
-mkdir -p "$rust_dir"
+# List of modules to process
+MODULES=(
+  schema
+  command
+  provider
+  router
+)
 
 # ---------------------------------------------------------------------
-# 🧩 Render helper
+# 🧽 Format Rust file
+# ---------------------------------------------------------------------
+format_rust() {
+  local file=$1
+
+  if command -v rustfmt >/dev/null 2>&1; then
+    echo "   ${CYAN}↳ Formatting (edition 2021):${RESET} $file"
+    if ! rustfmt --edition 2021 "$file"; then
+      echo "   ${RED}⚠ rustfmt failed for:${RESET} $file"
+    fi
+  else
+    echo "   ${YELLOW}⚠ rustfmt not found; skipping format${RESET}"
+  fi
+}
+# ---------------------------------------------------------------------
+# 🧩 Render module helper
 # ---------------------------------------------------------------------
 render_module() {
   local name=$1
@@ -51,22 +61,39 @@ render_module() {
     echo "${YELLOW}→ Rendering ${name}.rs...${RESET}"
     forge-template render "$yaml_src" "$mustache" > "$rust_out"
     echo "   ${GREEN}✓ Rendered:${RESET} $rust_out"
+
+    format_rust "$rust_out"
   else
     echo "${RED}✗ Missing file(s) for ${name}:${RESET}"
-    [[ ! -f "$yaml_src" ]] && echo "   - Missing YAML: $yaml_src"
-    [[ ! -f "$mustache" ]] && echo "   - Missing template: $mustache"
+    [[ ! -f "$yaml_src" ]] && echo "   - Missing YAML:      $yaml_src"
+    [[ ! -f "$mustache" ]] && echo "   - Missing template:  $mustache"
   fi
 
   echo ""
 }
 
 # ---------------------------------------------------------------------
-# 🚀 Render All Forge IDE Modules
+# 🚀 Main entrypoint for script
 # ---------------------------------------------------------------------
-render_module "schema"
-render_module "command"
-render_module "provider"
-render_module "router"
+main() {
+  echo ""
+  echo "${CYAN}${BOLD}⚙️  [Forge IDE Renderer]${RESET}"
+  echo "Modules folder:   $modules_dir"
+  echo "Templates folder: $templates_dir"
+  echo "Rust output:      $rust_dir"
+  echo ""
 
-echo "${GREEN}${BOLD}✅ All Forge IDE modules rendered successfully!${RESET}"
-echo ""
+  mkdir -p "$rust_dir"
+
+  for module in $MODULES; do
+    render_module "$module"
+  done
+
+  echo "${GREEN}${BOLD}✅ All Forge IDE modules rendered & formatted successfully!${RESET}"
+  echo ""
+}
+
+# ---------------------------------------------------------------------
+# 🔥 Execute main
+# ---------------------------------------------------------------------
+main

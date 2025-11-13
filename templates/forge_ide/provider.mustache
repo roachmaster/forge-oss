@@ -5,7 +5,6 @@
 // Template    : {{header.template}}
 // ============================================================================
 
-use async_trait::async_trait;
 {{#payload.ast.imports}}
 use {{{type}}}::{{{module}}}::{ {{{value}}} };
 {{/payload.ast.imports}}
@@ -15,7 +14,7 @@ use {{{type}}}::{{{module}}}::{ {{{value}}} };
 // ------------------------------------------------------------------------
 {{#payload.ast.items}}
 /// {{desc}}
-#[derive(Debug, Default)]
+#[derive(Default)]
 pub struct {{name}} {
     {{#fields}}
     pub {{name_snake_case}}: {{{type}}},
@@ -28,10 +27,10 @@ impl {{name}} {
     // METHOD: {{name}}
     // ----------------------------------------------------------------
     {{#async}}
-    pub async fn {{name_snake_case}}({{#args}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/args}}) -> {{{returns}}} {
+    pub async fn {{name_snake_case}}({{{sig_args}}}) -> {{{returns}}} {
     {{/async}}
     {{^async}}
-    pub fn {{name_snake_case}}({{#args}}{{name_snake_case}}: {{{type}}}{{#hasNext}}, {{/hasNext}}{{/args}}) -> {{{returns}}} {
+    pub fn {{name_snake_case}}({{{sig_args}}}) -> {{{returns}}} {
     {{/async}}
 
         {{#body.fields}}
